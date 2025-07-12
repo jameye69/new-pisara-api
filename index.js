@@ -1,4 +1,4 @@
-// Ladataan tarvittavat kirjastot
+// LOPULLINEN KOODI
 const express = require('express');
 const { google } = require('googleapis');
 const cors = require('cors');
@@ -6,51 +6,54 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Sallitaan pyynnöt vain sinun verkkosivultasi
-app.use(cors({ origin: 'https://pisara25.fi' }));
+const allowedOrigins = ['https://pisara25.fi', 'https://neulonbyajastamo.fi'];
+app.use(cors({ origin: allowedOrigins }));
 
-// Määritellään reitti, josta dataa haetaan (esim. /api/data)
 app.get('/api/data', async (req, res) => {
   try {
-
-    // Haetaan salaisuudet turvallisesti ympäristömuuttujista
     const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
     const API_KEY = process.env.GOOGLE_API_KEY;
 
     if (!SPREADSHEET_ID || !API_KEY) {
-      return res.status(500).json({ error: "Server configuration missing." });
+      return res.status(500).json({ error: "Palvelimen konfiguraatio on puutteellinen." });
     }
 
-    // Yhteys Google Sheets API:in
     const sheets = google.sheets({ version: 'v4', auth: API_KEY });
 
-    // Datan haku (määritä tähän solualueet, joista dataa haetaan)
-    // HUOM: VAIHDA NÄMÄ SOLUALUEET OMIIN OIKEISIIN ARVOIHISI!
+    // KORJATUT SOLUALUEET
     const responses = await sheets.spreadsheets.values.batchGet({
       spreadsheetId: SPREADSHEET_ID,
       ranges: [
-        'Yksityiset!M1:R3', // Kaavion data
-        'Yksityiset!S1:T4'  // Laskurien data
+        'Yksityiset!M1:Q3',  // Kaavion data (5 kuntaa)
+        'Yksityiset!R4',     // Laskuri: Yksityiset kpl
+        'Yksityiset!T2',     // Laskuri: Yksityiset €
+        'Yksityiset!X2',     // Laskuri: Yritykset kpl
+        'Yksityiset!W2'      // Laskuri: Yritykset €
       ]
     });
 
-    const [chartData, counterData] = responses.data.valueRanges;
+    const valueRanges = responses.data.valueRanges;
 
-    // Muotoillaan kaavion data
-    const chartValues = chartData.values || [];
+    // --- Kaavion datan käsittely ---
+    const chartValues = valueRanges[0].values || [];
     const formattedChart = {
-      labels: chartValues.length > 0 ? chartValues[0] : [],
-      dataset1: chartValues.length > 1 ? chartValues[1].map(v => parseFloat(v.replace(',', '.')) || 0) : [],
-      dataset2: chartValues.length > 2 ? chartValues[2].map(v => parseFloat(v.replace(',', '.')) || 0) : []
+      labels:   chartValues.length > 0 ? chartValues[0] : [],
+      dataset1: chartValues.length > 1 ? chartValues[1].map(v => parseFloat(String(v).replace(',', '.')) || 0) : [],
+      dataset2: chartValues.length > 2 ? chartValues[2].map(v => parseFloat(String(v).replace(',', '.')) || 0) : []
+    };
+    
+    // --- Laskurien datan käsittely ---
+    // Funktio, joka poimii turvallisesti arvon vastauksesta
+    const getCounterValue = (rangeIndex) => {
+        const values = valueRanges[rangeIndex]?.values;
+        return values && values.length > 0 ? parseFloat(String(values[0][0]).replace(',', '.')) || 0 : 0;
     };
 
-    // Muotoillaan laskurien data
-    const counterValues = counterData.values ? counterData.values.flat() : [];
     const formattedCounters = {
-        yksityisetKpl: parseFloat(counterValues[0]?.replace(',', '.')) || 0,
-        yksityisetEuro: parseFloat(counterValues[1]?.replace(',', '.')) || 0,
-        yrityksetKpl: parseFloat(counterValues[2]?.replace(',', '.')) || 0,
-        yrityksetEuro: parseFloat(counterValues[3]?.replace(',', '.')) || 0
+        yksityisetKpl: getCounterValue(1), // ranges-taulukon toinen alkio
+        yksityisetEuro: getCounterValue(2), // ranges-taulukon kolmas alkio
+        yrityksetKpl: getCounterValue(3),   // ranges-taulukon neljäs alkio
+        yrityksetEuro: getCounterValue(4)  // ranges-taulukon viides alkio
     };
 
     // Lähetetään siistitty data vastauksena
@@ -60,12 +63,11 @@ app.get('/api/data', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching data:', error.message);
-    res.status(500).json({ error: 'Failed to fetch data from Google Sheets' });
+    console.error('Virhe datan haussa:', error.message);
+    res.status(500).json({ error: 'Datan haku Google Sheetsistä epäonnistui' });
   }
 });
 
-// Käynnistetään palvelin
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`Palvelin käynnissä portissa ${PORT}`);
 });
