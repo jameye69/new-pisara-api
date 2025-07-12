@@ -1,4 +1,3 @@
-// LOPULLINEN KOODI
 const express = require('express');
 const { google } = require('googleapis');
 const cors = require('cors');
@@ -20,21 +19,21 @@ app.get('/api/data', async (req, res) => {
 
     const sheets = google.sheets({ version: 'v4', auth: API_KEY });
 
-    // KORJATUT SOLUALUEET
+    // KORJATUT SOLUALUEET OIKEILLA VÄLILEHDILLÄ
     const responses = await sheets.spreadsheets.values.batchGet({
       spreadsheetId: SPREADSHEET_ID,
       ranges: [
-        'Yksityiset!M1:Q3',  // Kaavion data (5 kuntaa)
+        'Yksityiset!M1:Q3',  // Kaavion data
         'Yksityiset!R4',     // Laskuri: Yksityiset kpl
         'Yksityiset!T2',     // Laskuri: Yksityiset €
-        'Yksityiset!X2',     // Laskuri: Yritykset kpl
-        'Yksityiset!W2'      // Laskuri: Yritykset €
+        'Yrityksille!X2',    // KORJATTU: Laskuri: Yritykset kpl
+        'Yrityksille!W2'     // KORJATTU: Laskuri: Yritykset €
       ]
     });
 
     const valueRanges = responses.data.valueRanges;
 
-    // --- Kaavion datan käsittely ---
+    // Kaavion datan käsittely
     const chartValues = valueRanges[0].values || [];
     const formattedChart = {
       labels:   chartValues.length > 0 ? chartValues[0] : [],
@@ -42,18 +41,17 @@ app.get('/api/data', async (req, res) => {
       dataset2: chartValues.length > 2 ? chartValues[2].map(v => parseFloat(String(v).replace(',', '.')) || 0) : []
     };
     
-    // --- Laskurien datan käsittely ---
-    // Funktio, joka poimii turvallisesti arvon vastauksesta
+    // Laskurien datan käsittely
     const getCounterValue = (rangeIndex) => {
         const values = valueRanges[rangeIndex]?.values;
         return values && values.length > 0 ? parseFloat(String(values[0][0]).replace(',', '.')) || 0 : 0;
     };
 
     const formattedCounters = {
-        yksityisetKpl: getCounterValue(1), // ranges-taulukon toinen alkio
-        yksityisetEuro: getCounterValue(2), // ranges-taulukon kolmas alkio
-        yrityksetKpl: getCounterValue(3),   // ranges-taulukon neljäs alkio
-        yrityksetEuro: getCounterValue(4)  // ranges-taulukon viides alkio
+        yksityisetKpl: getCounterValue(1),
+        yksityisetEuro: getCounterValue(2),
+        yrityksetKpl: getCounterValue(3),
+        yrityksetEuro: getCounterValue(4)
     };
 
     // Lähetetään siistitty data vastauksena
