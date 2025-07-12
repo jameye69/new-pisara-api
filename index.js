@@ -9,16 +9,6 @@ const PORT = process.env.PORT || 3001;
 // Sallitaan pyynnöt vain sinun verkkosivultasi
 app.use(cors({ origin: 'https://pisara25.fi' }));
 
-// Muuta aiemmin lisäämämme testireitti tähän muotoon:
-app.get('/', (req, res) => {
-  res.send('Pakotettu päivitys toimii! Versio 2.'); // Uusi, selkeä teksti
-});
-
-// Varmista, että vanha reittisi on edelleen tämän alapuolella
-app.get('/api/data', async (req, res) => {
-  // ...
-});
-
 // Määritellään reitti, josta dataa haetaan (esim. /api/data)
 app.get('/api/data', async (req, res) => {
   try {
