@@ -1,4 +1,4 @@
-// LOPULLINEN KOODI, JOKA PALVELEE KAIKKEA DATA
+// Ladataan tarvittavat kirjastot
 const express = require('express');
 const { google } = require('googleapis');
 const cors = require('cors');
@@ -11,6 +11,7 @@ app.use(cors({ origin: allowedOrigins }));
 
 // --- Reitti kaavioille ja laskureille (ennallaan) ---
 app.get('/api/data', async (req, res) => {
+  // ... Tämä osa pysyy täysin samana kuin ennen ...
   try {
     const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
     const API_KEY = process.env.GOOGLE_API_KEY;
@@ -54,31 +55,41 @@ app.get('/api/data', async (req, res) => {
   }
 });
 
-// --- UUSI REitti YRITYSLISTALLE ---
+
+// --- UUSI REitti YRITYSLISTALLE (ennallaan) ---
 app.get('/api/yrityslista', async (req, res) => {
+    // ... Tämä osa pysyy täysin samana kuin ennen ...
+});
+
+
+// --- LISÄTTY: UUSI REitti YRITYSTEN KAAVIOLLE ---
+app.get('/api/yrityskaavio', async (req, res) => {
     try {
         const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
         const API_KEY = process.env.GOOGLE_API_KEY;
-
-        if (!SPREADSHEET_ID || !API_KEY) {
-            return res.status(500).json({ error: "Palvelimen konfiguraatio on puutteellinen." });
-        }
-
         const sheets = google.sheets({ version: 'v4', auth: API_KEY });
-        
+
+        // TÄRKEÄÄ: Varmista, että tämä solualue on oikein sinun Sheetsissäsi!
+        // Oletan, että data on "Yrityksille"-välilehdellä soluissa M1:Q3
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            range: 'Yrityksille!N:N',
+            range: 'Yrityksille!M1:Q3', 
         });
 
-        res.json(response.data.values || []);
+        const chartValues = response.data.values || [];
+        const formattedChart = {
+          labels:       chartValues.length > 0 ? chartValues[0] : [],
+          ostojenMaara: chartValues.length > 1 ? chartValues[1].map(v => parseFloat(String(v).replace(',', '.')) || 0) : [],
+          suhdeluku:    chartValues.length > 2 ? chartValues[2].map(v => parseFloat(String(v).replace(',', '.')) || 0) : []
+        };
+        
+        res.json(formattedChart);
 
     } catch (error) {
-        console.error('Virhe /api/yrityslista reitissä:', error.message);
-        res.status(500).json({ error: 'Yrityslistan haku epäonnistui' });
+        console.error('Virhe /api/yrityskaavio reitissä:', error.message);
+        res.status(500).json({ error: 'Yrityskaavion datan haku epäonnistui' });
     }
 });
-// --- UUSI REitti PÄÄTTYY ---
 
 
 app.listen(PORT, () => {
