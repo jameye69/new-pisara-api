@@ -1,4 +1,4 @@
-// LOPULLINEN KOODI KAIKILLA REITEILLÄ V.2
+// LOPULLINEN JA TÄYDELLINEN BACKEND-KOODI KAIKILLA REITEILLÄ
 const express = require('express');
 const { google } = require('googleapis');
 const cors = require('cors');
@@ -79,34 +79,6 @@ app.get('/api/yrityslista', async (req, res) => {
     } catch (error) {
         console.error('Virhe /api/yrityslista reitissä:', error.message);
         res.status(500).json({ error: 'Yrityslistan haku epäonnistui' });
-    }
-});
-
-// --- LISÄTTY: UUSI REitti myydyille kappaleille ---
-app.get('/api/myydytkappaleet', async (req, res) => {
-    try {
-        const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
-        const API_KEY = process.env.GOOGLE_API_KEY;
-        const sheets = google.sheets({ version: 'v4', auth: API_KEY });
-
-        const response = await sheets.spreadsheets.values.batchGet({
-            spreadsheetId: SPREADSHEET_ID,
-            ranges: ['Yrityksille!R1:V1', 'Yrityksille!R2:V2']
-        });
-        
-        const labels = response.data.valueRanges[0].values?.[0] || [];
-        const values = response.data.valueRanges[1].values?.[0] || [];
-        
-        const formattedData = {
-            labels: labels,
-            values: values.map(v => parseInt(v, 10) || 0)
-        };
-
-        res.json(formattedData);
-
-    } catch (error) {
-        console.error('Virhe /api/myydytkappaleet reitissä:', error.message);
-        res.status(500).json({ error: 'Myytyjen kappaleiden datan haku epäonnistui' });
     }
 });
 
