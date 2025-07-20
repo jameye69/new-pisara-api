@@ -58,7 +58,7 @@ app.get('/api/yrityskaavio', async (req, res) => {
         const sheets = google.sheets({ version: 'v4', auth: API_KEY });
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            range: 'Yrityksille!M1:Q3',
+            range: 'Yrityksille!R1:V2',
         });
         
         const chartValues = response.data.values || [];
