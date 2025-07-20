@@ -1,4 +1,4 @@
-// LOPULLINEN JA TÄYDELLINEN BACKEND-KOODI KAIKILLA REITEILLÄ
+// LOPULLINEN JA VANKENNETTU BACKEND-KOODI
 const express = require('express');
 const { google } = require('googleapis');
 const cors = require('cors');
@@ -8,6 +8,12 @@ const PORT = process.env.PORT || 3001;
 
 const allowedOrigins = ['https://pisara25.fi', 'https://neulonbyajastamo.fi'];
 app.use(cors({ origin: allowedOrigins }));
+
+// Apufunktio, joka varmistaa, että data on numero-array
+const parseNumberArray = (arr) => {
+    if (!Array.isArray(arr)) return [];
+    return arr.map(v => parseFloat(String(v).replace(',', '.')) || 0);
+};
 
 // Reitti pääsivun laskureille ja yksityisten kaaviolle
 app.get('/api/data', async (req, res) => {
@@ -24,11 +30,12 @@ app.get('/api/data', async (req, res) => {
     const valueRanges = responses.data.valueRanges;
     const getCounterValue = (idx) => parseFloat(String(valueRanges[idx]?.values?.[0]?.[0] || '0').replace(',', '.')) || 0;
 
+    const chartValues = valueRanges[0].values || [];
     res.json({
       chart: {
-        labels:   valueRanges[0].values?.[0] || [],
-        dataset1: (valueRanges[0].values?.[1] || []).map(v => parseFloat(String(v).replace(',', '.')) || 0),
-        dataset2: (valueRanges[0].values?.[2] || []).map(v => parseFloat(String(v).replace(',', '.')) || 0)
+        labels:   chartValues[0] || [],
+        dataset1: parseNumberArray(chartValues[1]),
+        dataset2: parseNumberArray(chartValues[2])
       },
       counters: {
         yksityisetKpl: getCounterValue(1),
@@ -53,11 +60,12 @@ app.get('/api/yrityskaavio', async (req, res) => {
             spreadsheetId: SPREADSHEET_ID,
             range: 'Yrityksille!M1:Q3',
         });
+        
         const chartValues = response.data.values || [];
         res.json({
-          labels:       chartValues.length > 0 ? chartValues[0] : [],
-          ostojenMaara: chartValues.length > 1 ? chartValues[1].map(v => parseFloat(String(v).replace(',', '.')) || 0) : [],
-          suhdeluku:    chartValues.length > 2 ? chartValues[2].map(v => parseFloat(String(v).replace(',', '.')) || 0) : []
+          labels:       chartValues[0] || [],
+          ostojenMaara: parseNumberArray(chartValues[1]),
+          suhdeluku:    parseNumberArray(chartValues[2])
         });
     } catch (error) {
         console.error('Virhe /api/yrityskaavio reitissä:', error.message);
