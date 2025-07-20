@@ -1,4 +1,4 @@
-// LOPULLINEN JA TÄYDELLINEN BACKEND-KOODI
+// LOPULLINEN JA TÄYDELLINEN BACKEND-KOODI KAIKILLA REITEILLÄ
 const express = require('express');
 const { google } = require('googleapis');
 const cors = require('cors');
@@ -20,7 +20,6 @@ app.get('/api/data', async (req, res) => {
       spreadsheetId: SPREADSHEET_ID,
       ranges: [ 'Yksityiset!M1:Q3', 'Yksityiset!R4', 'Yksityiset!T2', 'Yrityksille!X2', 'Yrityksille!W2' ]
     });
-
     const valueRanges = responses.data.valueRanges;
     const getCounterValue = (idx) => parseFloat(String(valueRanges[idx]?.values?.[0]?.[0] || '0').replace(',', '.')) || 0;
 
@@ -39,7 +38,7 @@ app.get('/api/data', async (req, res) => {
     });
   } catch (error) {
     console.error('Virhe /api/data reitissä:', error.message);
-    res.status(500).json({ error: 'Datan haku epäonnistui' });
+    res.status(500).json({ error: 'Päädatan haku epäonnistui' });
   }
 });
 
@@ -49,12 +48,10 @@ app.get('/api/yrityskaavio', async (req, res) => {
         const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
         const API_KEY = process.env.GOOGLE_API_KEY;
         const sheets = google.sheets({ version: 'v4', auth: API_KEY });
-
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            range: 'Yrityksille!M1:Q3', // Varmista, että tämä on oikea alue
+            range: 'Yrityksille!M1:Q3',
         });
-
         const chartValues = response.data.values || [];
         res.json({
           labels:       chartValues.length > 0 ? chartValues[0] : [],
@@ -64,6 +61,23 @@ app.get('/api/yrityskaavio', async (req, res) => {
     } catch (error) {
         console.error('Virhe /api/yrityskaavio reitissä:', error.message);
         res.status(500).json({ error: 'Yrityskaavion datan haku epäonnistui' });
+    }
+});
+
+// Reitti yrityslistalle
+app.get('/api/yrityslista', async (req, res) => {
+    try {
+        const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
+        const API_KEY = process.env.GOOGLE_API_KEY;
+        const sheets = google.sheets({ version: 'v4', auth: API_KEY });
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId: SPREADSHEET_ID,
+            range: 'Yrityksille!N:N',
+        });
+        res.json(response.data.values || []);
+    } catch (error) {
+        console.error('Virhe /api/yrityslista reitissä:', error.message);
+        res.status(500).json({ error: 'Yrityslistan haku epäonnistui' });
     }
 });
 
