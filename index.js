@@ -32,6 +32,7 @@ app.get('/api/data', async (req, res) => {
 
     const chartValues = valueRanges[0].values || [];
     res.json({
+      lastUpdated: new Date(), // LISÄTTY: Aikaleima
       chart: {
         labels:   chartValues[0] || [],
         dataset1: parseNumberArray(chartValues[1]),
