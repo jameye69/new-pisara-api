@@ -17,14 +17,22 @@ const parseNumberArray = (arr) => {
 
 // Reitti pääsivun laskureille ja yksityisten kaaviolle
 app.get('/api/data', async (req, res) => {
-  try {
+ try {
     const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
     const API_KEY = process.env.GOOGLE_API_KEY;
     const sheets = google.sheets({ version: 'v4', auth: API_KEY });
 
+    // LISÄTTY UUSI SOLU (Yksityiset!S2) HAETTAVIEN ALUEIDEN LISTAAN
     const responses = await sheets.spreadsheets.values.batchGet({
       spreadsheetId: SPREADSHEET_ID,
-      ranges: [ 'Yksityiset!M1:Q3', 'Yksityiset!R4', 'Yksityiset!T2', 'Yrityksille!X2', 'Yrityksille!W2' ]
+      ranges: [
+          'Yksityiset!M1:Q3', // 0: Kaaviodata
+          'Yksityiset!R4',    // 1: Yksityiset kpl
+          'Yksityiset!T2',    // 2: Yksityiset €
+          'Yrityksille!X2',   // 3: Yritykset kpl
+          'Yrityksille!W2',   // 4: Yritykset €
+          'Yksityiset!Z2'     // 5: Keräystavoite <-- UUSI LISÄYS
+        ]
     });
 
     const valueRanges = responses.data.valueRanges;
@@ -32,7 +40,7 @@ app.get('/api/data', async (req, res) => {
 
     const chartValues = valueRanges[0].values || [];
     res.json({
-      lastUpdated: new Date(), // LISÄTTY: Aikaleima
+      lastUpdated: new Date(),
       chart: {
         labels:   chartValues[0] || [],
         dataset1: parseNumberArray(chartValues[1]),
@@ -42,13 +50,14 @@ app.get('/api/data', async (req, res) => {
         yksityisetKpl: getCounterValue(1),
         yksityisetEuro: getCounterValue(2),
         yrityksetKpl: getCounterValue(3),
-        yrityksetEuro: getCounterValue(4)
+        yrityksetEuro: getCounterValue(4),
+        keraysTavoite: getCounterValue(5) // <-- UUSI LISÄYS
       }
     });
-  } catch (error) {
+ } catch (error) {
     console.error('Virhe /api/data reitissä:', error.message);
     res.status(500).json({ error: 'Päädatan haku epäonnistui' });
-  }
+ }
 });
 
 // Reitti yritysten kaaviolle
