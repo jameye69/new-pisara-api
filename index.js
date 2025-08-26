@@ -22,7 +22,6 @@ app.get('/api/data', async (req, res) => {
     const API_KEY = process.env.GOOGLE_API_KEY;
     const sheets = google.sheets({ version: 'v4', auth: API_KEY });
 
-    // LISÄTTY UUSI SOLU (Yksityiset!S2) HAETTAVIEN ALUEIDEN LISTAAN
     const responses = await sheets.spreadsheets.values.batchGet({
       spreadsheetId: SPREADSHEET_ID,
       ranges: [
@@ -31,7 +30,7 @@ app.get('/api/data', async (req, res) => {
           'Yksityiset!T2',    // 2: Yksityiset €
           'Yrityksille!X2',   // 3: Yritykset kpl
           'Yrityksille!W2',   // 4: Yritykset €
-          'Yksityiset!Z2'     // 5: Keräystavoite <-- UUSI LISÄYS
+          'Yksityiset!Z2'     // 5: Keräystavoite
         ]
     });
 
@@ -51,7 +50,7 @@ app.get('/api/data', async (req, res) => {
         yksityisetEuro: getCounterValue(2),
         yrityksetKpl: getCounterValue(3),
         yrityksetEuro: getCounterValue(4),
-        keraysTavoite: getCounterValue(5) // <-- UUSI LISÄYS
+        keraysTavoite: getCounterValue(5)
       }
     });
  } catch (error) {
@@ -99,6 +98,39 @@ app.get('/api/yrityslista', async (req, res) => {
         res.status(500).json({ error: 'Yrityslistan haku epäonnistui' });
     }
 });
+
+// --- UUSI LISÄYS ALKAA TÄSTÄ ---
+
+// Reitti hyväksytyille terveisille
+app.get('/api/terveiset', async (req, res) => {
+    try {
+        const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
+        const API_KEY = process.env.GOOGLE_API_KEY;
+        const sheets = google.sheets({ version: 'v4', auth: API_KEY });
+        
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId: SPREADSHEET_ID,
+            // Hakee datan suodatetulta välilehdeltä.
+            // Oletetaan, että tervehdys on sarakkeessa A ja kunta sarakkeessa B.
+            range: 'JulkaistutTerveiset!A:B', 
+        });
+        
+        // Muunnetaan rivit objekteiksi, jotta niitä on helpompi käsitellä
+        const values = response.data.values || [];
+        const terveiset = values.map(row => ({
+            tervehdys: row[0] || '',
+            kunta: row[1] || ''
+        }));
+
+        res.json(terveiset);
+
+    } catch (error) {
+        console.error('Virhe /api/terveiset reitissä:', error.message);
+        res.status(500).json({ error: 'Terveisten haku epäonnistui' });
+    }
+});
+
+// --- UUSI LISÄYS PÄÄTTYY ---
 
 app.listen(PORT, () => {
   console.log(`Palvelin käynnissä portissa ${PORT}`);
