@@ -110,16 +110,16 @@ app.get('/api/terveiset', async (req, res) => {
     
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      // Hakee datan suodatetulta välilehdeltä.
-      // Oletetaan, että tervehdys on sarakkeessa A ja kunta sarakkeessa B.
-      range: 'JulkaistutTerveiset!A:B', 
+      // Hakee nyt 3 saraketta
+      range: 'JulkaistutTerveiset!A:C', 
     });
     
-    // Muunnetaan rivit objekteiksi, jotta niitä on helpompi käsitellä
+    // Muunnetaan rivit objekteiksi, joissa on nyt myös aikaleima
     const values = response.data.values || [];
     const terveiset = values.map(row => ({
         tervehdys: row[0] || '',
-        kunta: row[1] || ''
+        kunta: row[1] || '',
+        aikaleima: row[2] || '' // UUSI LISÄYS
     }));
 
     res.json(terveiset);
@@ -136,3 +136,4 @@ app.get('/api/terveiset', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Palvelin käynnissä portissa ${PORT}`);
 });
+
