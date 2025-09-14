@@ -14,7 +14,25 @@ const parseNumberArray = (arr) => {
     return arr.map(v => parseFloat(String(v).replace(',', '.')) || 0);
 };
 
-// --- YLEISDATAN HAKU (EI MUUTOKSIA) ---
+const fetchAndParseSheetData = async (auth, spreadsheetId, range) => {
+    const sheets = google.sheets({ version: 'v4', auth });
+    const response = await sheets.spreadsheets.values.get({ spreadsheetId, range });
+    const values = response.data.values || [];
+
+    if (values.length < 2) return [];
+
+    const headers = values[0];
+    const dataRows = values.slice(1);
+
+    return dataRows.map(row => {
+        const rowData = {};
+        headers.forEach((header, index) => {
+            rowData[header] = row[index] || '';
+        });
+        return rowData;
+    });
+};
+
 app.get('/api/data', async (req, res) => {
     try {
         const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -54,8 +72,7 @@ app.get('/api/data', async (req, res) => {
     }
 });
 
-
-// --- YRITYSKAAVION HAKU (KORJATTU SELITYKSILLÄ) ---
+// --- KORJATTU YRITYSKAAVIO ---
 app.get('/api/yrityskaavio', async (req, res) => {
     try {
         const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -63,10 +80,9 @@ app.get('/api/yrityskaavio', async (req, res) => {
         const sheets = google.sheets({ version: 'v4', auth: API_KEY });
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            // TÄRKEÄÄ: Tämä kiinteä alue on todennäköisesti nyt väärä.
-            // Sinun täytyy tarkistaa Sheetsistä, missä soluissa kaavion data NYT on,
-            // ja päivittää tämä alue vastaamaan sitä. Esim. 'Yrityksille!U1:Y3'
-            range: 'Yrityksille!S1:W3',
+            // KORJATTU: Päivitetty alue vastaamaan kuvakaappausta.
+            // Data haetaan nyt sarakkeista T, U, V, W, X.
+            range: 'Yrityksille!T1:X3',
         });
         
         const chartValues = response.data.values || [];
@@ -81,55 +97,24 @@ app.get('/api/yrityskaavio', async (req, res) => {
     }
 });
 
-// --- YRITYSLISTAN HAKU (TÄYSIN UUDISTETTU JA VANKENNETTU) ---
+// --- KORJATTU YRITYSLISTA ---
 app.get('/api/yrityslista', async (req, res) => {
     try {
         const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
         const API_KEY = process.env.GOOGLE_API_KEY;
-        const sheets = google.sheets({ version: 'v4', auth: API_KEY });
 
-        // 1. Hae KAIKKI data välilehdeltä. Käytetään laajaa aluetta (A-Z),
-        // jotta uudet sarakkeet tulevat varmasti mukaan.
-        const response = await sheets.spreadsheets.values.get({
-            spreadsheetId: SPREADSHEET_ID,
-            range: 'Yrityksille!A:Z', // Hakee kaikki sarakkeet A:sta Z:aan
-        });
+        const yrityksetData = await fetchAndParseSheetData(API_KEY, SPREADSHEET_ID, 'Yrityksille!A:Z');
         
-        const values = response.data.values || [];
-
-        // Tarkistetaan onko sheetissä mitään dataa.
-        if (values.length < 2) {
-            return res.json([]); // Palautetaan tyhjä lista jos ei ole otsikoita tai dataa.
-        }
-
-        // 2. Erottele otsikot (ensimmäinen rivi) ja datarivit (loput).
-        const headers = values[0];
-        const dataRows = values.slice(1);
-
-        // 3. Muunna jokainen datarivi objektiksi, jossa avaimina ovat sarakkeiden otsikot.
-        const yritykset = dataRows
-            .map(row => {
-                const rowObject = {};
-                headers.forEach((header, index) => {
-                    rowObject[header] = row[index];
-                });
-                return rowObject;
-            })
-            // 4. Suodata ja muotoile data käyttämällä otsikkonimiä, ei indeksinumeroita.
-            .filter(riviObjekti => {
-                // TARKISTA TÄMÄ: Varmista, että sarakkeen otsikko on täsmälleen 'Julkaisulupa'.
-                const julkaisulupa = riviObjekti['Julkaisulupa'];
-                return julkaisulupa && julkaisulupa.trim() === 'Haluan, että tietoni lisätään osallistujalistalle';
-            })
-            .map(riviObjekti => {
-                // TARKISTA NÄMÄ: Varmista, että otsikot ovat 'Yrityksen nimi', 'Terveiset' ja 'Hyväksytty'.
-                const onkoHyvaksytty = riviObjekti['Hyväksytty'] && riviObjekti['Hyväksytty'].trim().toLowerCase() === 'kyllä';
-                
-                return {
-                    nimi: riviObjekti['Yrityksen nimi'] || '',
-                    tervehdys: onkoHyvaksytty ? (riviObjekti['Terveiset'] || '') : ''
-                };
-            });
+        const yritykset = yrityksetData
+            // KORJATTU: Käytetään kuvan mukaista sarakkeen nimeä
+            .filter(row => row['Salli tietojen julkaisu'] === 'Haluan, että tietoni lisätään osallistujalistalle')
+            .map(row => ({
+                // KORJATTU: Käytetään kuvan mukaisia sarakkeiden nimiä
+                nimi: row['Yrityksen nimi'] || '',
+                tervehdys: (String(row['Tervehdys hyväksytty']).trim().toLowerCase() === 'k') 
+                            ? (row['Tervehdys'] || '') 
+                            : ''
+            }));
 
         res.json(yritykset);
     } catch (error) {
@@ -138,8 +123,6 @@ app.get('/api/yrityslista', async (req, res) => {
     }
 });
 
-
-// --- TERVEISTEN HAKU (EI MUUTOKSIA) ---
 app.get('/api/terveiset', async (req, res) => {
     try {
         const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
