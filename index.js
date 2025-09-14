@@ -14,16 +14,18 @@ const parseNumberArray = (arr) => {
     return arr.map(v => parseFloat(String(v).replace(',', '.')) || 0);
 };
 
+// Apufunktio, joka hakee datan ja muuttaa sen objekteiksi otsikkorivin perusteella.
 const fetchAndParseSheetData = async (auth, spreadsheetId, range) => {
     const sheets = google.sheets({ version: 'v4', auth });
     const response = await sheets.spreadsheets.values.get({ spreadsheetId, range });
     const values = response.data.values || [];
 
-    if (values.length < 2) return [];
+    if (values.length < 2) return []; // Palauttaa tyhjän, jos ei ole otsikoita ja dataa
 
-    const headers = values[0];
-    const dataRows = values.slice(1);
+    const headers = values[0]; // Ensimmäinen rivi on otsikot
+    const dataRows = values.slice(1); // Loput ovat dataa
 
+    // Muunnetaan jokainen rivi-array objektiksi, jossa avaimena on sarakkeen otsikko
     return dataRows.map(row => {
         const rowData = {};
         headers.forEach((header, index) => {
@@ -72,7 +74,6 @@ app.get('/api/data', async (req, res) => {
     }
 });
 
-// --- KORJATTU YRITYSKAAVIO ---
 app.get('/api/yrityskaavio', async (req, res) => {
     try {
         const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -80,8 +81,6 @@ app.get('/api/yrityskaavio', async (req, res) => {
         const sheets = google.sheets({ version: 'v4', auth: API_KEY });
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            // KORJATTU: Päivitetty alue vastaamaan kuvakaappausta.
-            // Data haetaan nyt sarakkeista T, U, V, W, X.
             range: 'Yrityksille!T1:X3',
         });
         
@@ -97,7 +96,6 @@ app.get('/api/yrityskaavio', async (req, res) => {
     }
 });
 
-// --- KORJATTU YRITYSLISTA ---
 app.get('/api/yrityslista', async (req, res) => {
     try {
         const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -106,13 +104,12 @@ app.get('/api/yrityslista', async (req, res) => {
         const yrityksetData = await fetchAndParseSheetData(API_KEY, SPREADSHEET_ID, 'Yrityksille!A:Z');
         
         const yritykset = yrityksetData
-            // KORJATTU: Käytetään kuvan mukaista sarakkeen nimeä
-            .filter(row => row['Salli tietojen julkaisu'] === 'Haluan, että tietoni lisätään osallistujalistalle')
+            .filter(row => row['Haluan, että tietoni lisätään osallistujalistalle'] === 'Haluan, että tietoni lisätään osallistujalistalle')
             .map(row => ({
-                // KORJATTU: Käytetään kuvan mukaisia sarakkeiden nimiä
                 nimi: row['Yrityksen nimi'] || '',
+                // KORJATTU: Käytetään nyt antamaasi nimeä "Terveiset / onnittelut"
                 tervehdys: (String(row['Tervehdys hyväksytty']).trim().toLowerCase() === 'k') 
-                            ? (row['Tervehdys'] || '') 
+                            ? (row['Terveiset / onnittelut'] || '') 
                             : ''
             }));
 
