@@ -29,7 +29,7 @@ const fetchAndParseSheetData = async (auth, spreadsheetId, range) => {
     return dataRows.map(row => {
         const rowData = {};
         headers.forEach((header, index) => {
-            rowData[header] = row[index] || '';
+            rowData[header.trim()] = row[index] || ''; // .trim() poistaa mahdolliset piilovälilyönnit otsikoista
         });
         return rowData;
     });
@@ -96,6 +96,7 @@ app.get('/api/yrityskaavio', async (req, res) => {
     }
 });
 
+// --- LOPULLINEN KORJATTU YRITYSLISTA ---
 app.get('/api/yrityslista', async (req, res) => {
     try {
         const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -106,9 +107,9 @@ app.get('/api/yrityslista', async (req, res) => {
         const yritykset = yrityksetData
             .filter(row => row['Haluan, että tietoni lisätään osallistujalistalle'] === 'Haluan, että tietoni lisätään osallistujalistalle')
             .map(row => ({
-                nimi: row['Yrityksen nimi'] || '',
-                // KORJATTU: Käytetään nyt antamaasi nimeä "Terveiset / onnittelut"
-                tervehdys: (String(row['Tervehdys hyväksytty']).trim().toLowerCase() === 'k') 
+                // KORJATTU: Käytetään nyt antamaasi listaa vastaavia, oikeita sarakkeiden nimiä
+                nimi: row['Yritys/yhteisö'] || '',
+                tervehdys: (String(row['Tervehdys_Hyväksytty']).trim().toLowerCase() === 'k') 
                             ? (row['Terveiset / onnittelut'] || '') 
                             : ''
             }));
