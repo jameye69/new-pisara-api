@@ -9,13 +9,11 @@ const PORT = process.env.PORT || 3001;
 const allowedOrigins = ['https://pisara25.fi', 'https://neulonbyajastamo.fi'];
 app.use(cors({ origin: allowedOrigins }));
 
-// Apufunktio, joka varmistaa, että data on numero-array
 const parseNumberArray = (arr) => {
     if (!Array.isArray(arr)) return [];
     return arr.map(v => parseFloat(String(v).replace(',', '.')) || 0);
 };
 
-// Reitti pääsivun laskureille ja yksityisten kaaviolle
 app.get('/api/data', async (req, res) => {
  try {
     const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -25,12 +23,8 @@ app.get('/api/data', async (req, res) => {
     const responses = await sheets.spreadsheets.values.batchGet({
       spreadsheetId: SPREADSHEET_ID,
       ranges: [
-          'Yksityiset!M1:Q3', // 0: Kaaviodata
-          'Yksityiset!R4',    // 1: Yksityiset kpl
-          'Yksityiset!T2',    // 2: Yksityiset €
-          'Yrityksille!X2',   // 3: Yritykset kpl
-          'Yrityksille!W2',   // 4: Yritykset €
-          'Yksityiset!Z2'     // 5: Keräystavoite
+          'Yksityiset!M1:Q3', 'Yksityiset!R4', 'Yksityiset!T2', 
+          'Yrityksille!X2', 'Yrityksille!W2', 'Yksityiset!Z2'
         ]
     });
 
@@ -59,7 +53,6 @@ app.get('/api/data', async (req, res) => {
  }
 });
 
-// Reitti yritysten kaaviolle
 app.get('/api/yrityskaavio', async (req, res) => {
     try {
         const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -82,8 +75,7 @@ app.get('/api/yrityskaavio', async (req, res) => {
     }
 });
 
-// --- MUUTETTU OSA ALKAA ---
-// Reitti yrityslistalle (hakee nyt myös terveiset)
+// --- PÄIVITETTY OSA ---
 app.get('/api/yrityslista', async (req, res) => {
     try {
         const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -91,27 +83,24 @@ app.get('/api/yrityslista', async (req, res) => {
         const sheets = google.sheets({ version: 'v4', auth: API_KEY });
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            // Hakee sarakkeet N (nimi), O (tyhjä) ja P (tervehdys)
-            range: 'Yrityksille!N:P', 
+            // Hakee datan uudelta, moderoidulta välilehdeltä
+            range: 'JulkaistutYritysTerveiset!A:B', 
         });
         
-        const values = (response.data.values || []).slice(1); // Ohitetaan otsikkorivi
+        const values = response.data.values || [];
         const yritykset = values.map(row => ({
             nimi: row[0] || '',
-            tervehdys: row[2] || '' // Sarakkeesta P
-        })).filter(yritys => yritys.nimi); // Suodatetaan tyhjät nimet pois
+            tervehdys: row[1] || '' // Sarakkeesta B
+        })).filter(yritys => yritys.nimi);
 
         res.json(yritykset);
-
     } catch (error) {
         console.error('Virhe /api/yrityslista reitissä:', error.message);
         res.status(500).json({ error: 'Yrityslistan haku epäonnistui' });
     }
 });
-// --- MUUTETTU OSA PÄÄTTYY ---
+// --- PÄIVITYS PÄÄTTYY ---
 
-
-// Reitti hyväksytyille terveisille
 app.get('/api/terveiset', async (req, res) => {
   try {
     const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
