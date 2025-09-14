@@ -99,22 +99,18 @@ app.get('/api/yrityskaavio', async (req, res) => {
 // --- LOPULLINEN KORJATTU YRITYSLISTA ---
 app.get('/api/yrityslista', async (req, res) => {
     try {
+        console.log("Aloitetaan /api/yrityslista haku...");
         const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
         const API_KEY = process.env.GOOGLE_API_KEY;
 
+        // Haetaan ja parsitaan kaikki data ilman suodatusta
         const yrityksetData = await fetchAndParseSheetData(API_KEY, SPREADSHEET_ID, 'Yrityksille!A:Z');
-        
-        const yritykset = yrityksetData
-            .filter(row => row['Haluan, että tietoni lisätään osallistujalistalle'] === 'Haluan, että tietoni lisätään osallistujalistalle')
-            .map(row => ({
-                // KORJATTU: Käytetään nyt antamaasi listaa vastaavia, oikeita sarakkeiden nimiä
-                nimi: row['Yritys/yhteisö'] || '',
-                tervehdys: (String(row['Tervehdys_Hyväksytty']).trim().toLowerCase() === 'k') 
-                            ? (row['Terveiset / onnittelut'] || '') 
-                            : ''
-            }));
 
-        res.json(yritykset);
+        console.log(`Haku onnistui. Datarivejä löytyi (ennen suodatusta): ${yrityksetData.length}`);
+
+        // Palautetaan KAIKKI data sellaisenaan, jotta näemme sen rakenteen
+        res.json(yrityksetData);
+
     } catch (error) {
         console.error('Virhe /api/yrityslista reitissä:', error.message);
         res.status(500).json({ error: 'Yrityslistan haku epäonnistui' });
@@ -148,3 +144,4 @@ app.get('/api/terveiset', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Palvelin käynnissä portissa ${PORT}`);
 });
+
