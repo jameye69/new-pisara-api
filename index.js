@@ -83,15 +83,23 @@ app.get('/api/yrityslista', async (req, res) => {
         const sheets = google.sheets({ version: 'v4', auth: API_KEY });
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            // Hakee datan uudelta, moderoidulta välilehdeltä
-            range: 'JulkaistutYritysTerveiset!A:B', 
+            // Hakee sarakkeet N, O, P ja Q
+            range: 'Yrityksille!N:Q', 
         });
         
-        const values = response.data.values || [];
-        const yritykset = values.map(row => ({
-            nimi: row[0] || '',
-            tervehdys: row[1] || '' // Sarakkeesta B
-        })).filter(yritys => yritys.nimi);
+        const values = (response.data.values || []).slice(1); // Ohitetaan otsikkorivi
+        
+        const yritykset = values
+            // 1. Suodatetaan mukaan vain ne rivit, joissa julkaisulupa on annettu.
+            // Oletetaan, että kun lupa on annettu, solussa lukee "Haluan, että tietoni lisätään osallistujalistalle".
+            .filter(row => row[1] && row[1] === 'Haluan, että tietoni lisätään osallistujalistalle')
+            
+            // 2. Muotoillaan data ja lisätään tervehdys vain, jos se on erikseen hyväksytty.
+            .map(row => ({
+                nimi: row[0] || '',
+                // Lisätään tervehdys (sarake P, indeksi 2) vain, jos hyväksyntä (sarake Q, indeksi 3) on 'k'.
+                tervehdys: (row[3] && row[3].toLowerCase() === 'k') ? (row[2] || '') : ''
+            }));
 
         res.json(yritykset);
     } catch (error) {
