@@ -53,6 +53,7 @@ app.get('/api/data', async (req, res) => {
  }
 });
 
+// --- KORJATTU OSA ---
 app.get('/api/yrityskaavio', async (req, res) => {
     try {
         const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -60,7 +61,8 @@ app.get('/api/yrityskaavio', async (req, res) => {
         const sheets = google.sheets({ version: 'v4', auth: API_KEY });
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            range: 'Yrityksille!R1:V3',
+            // Päivitetty hakemaan sarakkeista S-W
+            range: 'Yrityksille!S1:W3',
         });
         
         const chartValues = response.data.values || [];
@@ -75,7 +77,6 @@ app.get('/api/yrityskaavio', async (req, res) => {
     }
 });
 
-// --- PÄIVITETTY OSA ---
 app.get('/api/yrityslista', async (req, res) => {
     try {
         const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -83,22 +84,17 @@ app.get('/api/yrityslista', async (req, res) => {
         const sheets = google.sheets({ version: 'v4', auth: API_KEY });
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            // Hakee sarakkeet N, O, P ja Q
-            range: 'Yrityksille!N:Q', 
+            // Päivitetty hakemaan sarakkeista N-R
+            range: 'Yrityksille!N:R', 
         });
         
-        const values = (response.data.values || []).slice(1); // Ohitetaan otsikkorivi
+        const values = (response.data.values || []).slice(1);
         
         const yritykset = values
-            // 1. Suodatetaan mukaan vain ne rivit, joissa julkaisulupa on annettu.
-            // Oletetaan, että kun lupa on annettu, solussa lukee "Haluan, että tietoni lisätään osallistujalistalle".
-            .filter(row => row[1] && row[1] === 'Haluan, että tietoni lisätään osallistujalistalle')
-            
-            // 2. Muotoillaan data ja lisätään tervehdys vain, jos se on erikseen hyväksytty.
+            .filter(row => row[1] && row[1].trim() === 'Haluan, että tietoni lisätään osallistujalistalle')
             .map(row => ({
                 nimi: row[0] || '',
-                // Lisätään tervehdys (sarake P, indeksi 2) vain, jos hyväksyntä (sarake Q, indeksi 3) on 'k'.
-                tervehdys: (row[3] && row[3].toLowerCase() === 'k') ? (row[2] || '') : ''
+                tervehdys: (row[3] && row[3].trim().toLowerCase() === 'k') ? (row[2] || '') : ''
             }));
 
         res.json(yritykset);
@@ -107,7 +103,7 @@ app.get('/api/yrityslista', async (req, res) => {
         res.status(500).json({ error: 'Yrityslistan haku epäonnistui' });
     }
 });
-// --- PÄIVITYS PÄÄTTYY ---
+// --- KORJAUS PÄÄTTYY ---
 
 app.get('/api/terveiset', async (req, res) => {
   try {
