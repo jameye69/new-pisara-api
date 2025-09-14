@@ -1,4 +1,4 @@
-// LOPULLINEN JA VANKENNETTU BACKEND-KOODI
+// LOPULLINEN JA TOIMIVA BACKEND-KOODI
 const express = require('express');
 const { google } = require('googleapis');
 const cors = require('cors');
@@ -20,16 +20,15 @@ const fetchAndParseSheetData = async (auth, spreadsheetId, range) => {
     const response = await sheets.spreadsheets.values.get({ spreadsheetId, range });
     const values = response.data.values || [];
 
-    if (values.length < 2) return []; // Palauttaa tyhjän, jos ei ole otsikoita ja dataa
+    if (values.length < 2) return [];
 
-    const headers = values[0]; // Ensimmäinen rivi on otsikot
-    const dataRows = values.slice(1); // Loput ovat dataa
+    const headers = values[0];
+    const dataRows = values.slice(1);
 
-    // Muunnetaan jokainen rivi-array objektiksi, jossa avaimena on sarakkeen otsikko
     return dataRows.map(row => {
         const rowData = {};
         headers.forEach((header, index) => {
-            rowData[header.trim()] = row[index] || ''; // .trim() poistaa mahdolliset piilovälilyönnit otsikoista
+            rowData[header.trim()] = row[index] || '';
         });
         return rowData;
     });
@@ -99,18 +98,23 @@ app.get('/api/yrityskaavio', async (req, res) => {
 // --- LOPULLINEN KORJATTU YRITYSLISTA ---
 app.get('/api/yrityslista', async (req, res) => {
     try {
-        console.log("Aloitetaan /api/yrityslista haku...");
         const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
         const API_KEY = process.env.GOOGLE_API_KEY;
 
-        // Haetaan ja parsitaan kaikki data ilman suodatusta
         const yrityksetData = await fetchAndParseSheetData(API_KEY, SPREADSHEET_ID, 'Yrityksille!A:Z');
+        
+        const yritykset = yrityksetData
+            // KORJATTU: Suodatetaan nyt arvolla "Kyllä", joka löytyi raakadatasta
+            .filter(row => row['Haluan, että tietoni lisätään osallistujalistalle'] === 'Kyllä')
+            .map(row => ({
+                // Käytetään datasta varmennettuja sarakkeiden nimiä
+                nimi: row['Yritys/yhteisö'] || '',
+                tervehdys: (String(row['Tervehdys_Hyväksytty']).trim().toLowerCase() === 'k') 
+                            ? (row['Terveiset / onnittelut'] || '') 
+                            : ''
+            }));
 
-        console.log(`Haku onnistui. Datarivejä löytyi (ennen suodatusta): ${yrityksetData.length}`);
-
-        // Palautetaan KAIKKI data sellaisenaan, jotta näemme sen rakenteen
-        res.json(yrityksetData);
-
+        res.json(yritykset);
     } catch (error) {
         console.error('Virhe /api/yrityslista reitissä:', error.message);
         res.status(500).json({ error: 'Yrityslistan haku epäonnistui' });
@@ -144,4 +148,3 @@ app.get('/api/terveiset', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Palvelin käynnissä portissa ${PORT}`);
 });
-
