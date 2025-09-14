@@ -1,4 +1,4 @@
-// LOPULLINEN JA TOIMIVA BACKEND-KOODI (V5)
+// LOPULLINEN JA TOIMIVA BACKEND-KOODI (V6)
 const express = require('express');
 const { google } = require('googleapis');
 const cors = require('cors');
@@ -46,8 +46,8 @@ app.get('/api/data', async (req, res) => {
                 'Yksityiset!M1:Q3',
                 'Yksityiset!R4',
                 'Yksityiset!T2',
-                'Yrityksille!Z2', // KORJATTU: yrityksetKpl
-                'Yrityksille!Y2', // KORJATTU: yrityksetEuro
+                'Yrityksille!Z2',
+                'Yrityksille!Y2',
                 'Yksityiset!Z2'
             ]
         });
@@ -122,22 +122,24 @@ app.get('/api/yrityslista', async (req, res) => {
     }
 });
 
+// --- TÄMÄ OSIO ON NYT PÄIVITETTY TIETOJESI MUKAAN ---
 app.get('/api/terveiset', async (req, res) => {
     try {
         const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
         const API_KEY = process.env.GOOGLE_API_KEY;
-        const sheets = google.sheets({ version: 'v4', auth: API_KEY });
+
+        // Haetaan kaikki data 'Vastaukset'-välilehdeltä
+        const kaikkiData = await fetchAndParseSheetData(API_KEY, SPREADSHEET_ID, 'Vastaukset!A:Z');
         
-        const response = await sheets.spreadsheets.values.get({
-            spreadsheetId: SPREADSHEET_ID,
-            range: 'JulkaistutTerveiset!A:B', 
-        });
-        
-        const values = response.data.values || [];
-        const terveiset = values.map(row => ({
-            tervehdys: row[0] || '',
-            kunta: row[1] || ''
-        }));
+        const terveiset = kaikkiData
+            // 1. Suodatetaan rivit, joiden 'Hyväksytty'-sarakkeessa on 'k'
+            .filter(row => row['Hyväksytty'] && String(row['Hyväksytty']).trim().toLowerCase() === 'k')
+            // 2. Muotoillaan data siistiin muotoon oikeilla sarakenimillä
+            .map(row => ({
+                aikaleima: row['Aikaleima'] || '',
+                tervehdys: row['Tervehdys'] || '',
+                kunta: row['Kunta'] || ''
+            }));
 
         res.json(terveiset);
     } catch (error) {
@@ -145,6 +147,7 @@ app.get('/api/terveiset', async (req, res) => {
         res.status(500).json({ error: 'Terveisten haku epäonnistui' });
     }
 });
+// ----------------------------------------------------
 
 app.listen(PORT, () => {
     console.log(`Palvelin käynnissä portissa ${PORT}`);
