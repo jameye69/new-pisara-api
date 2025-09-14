@@ -1,4 +1,4 @@
-// LOPULLINEN JA TOIMIVA BACKEND-KOODI (V4)
+// LOPULLINEN JA TOIMIVA BACKEND-KOODI (V5)
 const express = require('express');
 const { google } = require('googleapis');
 const cors = require('cors');
@@ -43,8 +43,12 @@ app.get('/api/data', async (req, res) => {
         const responses = await sheets.spreadsheets.values.batchGet({
             spreadsheetId: SPREADSHEET_ID,
             ranges: [
-                'Yksityiset!M1:Q3', 'Yksityiset!R4', 'Yksityiset!T2',
-                'Yrityksille!X2', 'Yrityksille!W2', 'Yksityiset!Z2'
+                'Yksityiset!M1:Q3',
+                'Yksityiset!R4',
+                'Yksityiset!T2',
+                'Yrityksille!Z2', // KORJATTU: yrityksetKpl
+                'Yrityksille!Y2', // KORJATTU: yrityksetEuro
+                'Yksityiset!Z2'
             ]
         });
 
@@ -105,7 +109,6 @@ app.get('/api/yrityslista', async (req, res) => {
         const yritykset = yrityksetData
             .filter(row => row['Yritys/yhteisö'] && row['Tietonsa julkistaneet mukana olevat yritykset'])
             .map(row => ({
-                // MUUTOS TÄSSÄ: Haetaan tieto nyt sarakkeesta N ('Tietonsa julkistaneet...')
                 nimi: row['Tietonsa julkistaneet mukana olevat yritykset'] || '', 
                 tervehdys: (String(row['Tervehdys_Hyväksytty']).trim().toLowerCase() === 'k') 
                             ? (row['Terveiset / onnittelut'] || '') 
