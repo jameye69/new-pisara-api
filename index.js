@@ -1,4 +1,4 @@
-// LOPULLINEN JA TOIMIVA BACKEND-KOODI (V3)
+// LOPULLINEN JA TOIMIVA BACKEND-KOODI (V4)
 const express = require('express');
 const { google } = require('googleapis');
 const cors = require('cors');
@@ -14,6 +14,7 @@ const parseNumberArray = (arr) => {
     return arr.map(v => parseFloat(String(v).replace(',', '.')) || 0);
 };
 
+// Apufunktio, joka hakee datan ja muuttaa sen objekteiksi otsikkorivin perusteella.
 const fetchAndParseSheetData = async (auth, spreadsheetId, range) => {
     const sheets = google.sheets({ version: 'v4', auth });
     const response = await sheets.spreadsheets.values.get({ spreadsheetId, range });
@@ -94,7 +95,6 @@ app.get('/api/yrityskaavio', async (req, res) => {
     }
 });
 
-// --- LOPULLINEN KORJATTU YRITYSLISTA ---
 app.get('/api/yrityslista', async (req, res) => {
     try {
         const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -103,10 +103,10 @@ app.get('/api/yrityslista', async (req, res) => {
         const yrityksetData = await fetchAndParseSheetData(API_KEY, SPREADSHEET_ID, 'Yrityksille!A:Z');
         
         const yritykset = yrityksetData
-            // KORJATTU: Luotettavampi suodatus. Näytetään rivi, jos siinä on yrityksen nimi JA julkaisuteksti.
             .filter(row => row['Yritys/yhteisö'] && row['Tietonsa julkistaneet mukana olevat yritykset'])
             .map(row => ({
-                nimi: row['Yritys/yhteisö'] || '',
+                // MUUTOS TÄSSÄ: Haetaan tieto nyt sarakkeesta N ('Tietonsa julkistaneet...')
+                nimi: row['Tietonsa julkistaneet mukana olevat yritykset'] || '', 
                 tervehdys: (String(row['Tervehdys_Hyväksytty']).trim().toLowerCase() === 'k') 
                             ? (row['Terveiset / onnittelut'] || '') 
                             : ''
