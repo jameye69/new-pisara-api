@@ -1,4 +1,4 @@
-// LOPULLINEN JA TOIMIVA BACKEND-KOODI (V6.1 - Korjattu yrityskaavio)
+// LOPULLINEN JA TOIMIVA BACKEND-KOODI (V6.2 - Korjattu CORS ja yrityskaavio)
 const express = require('express');
 const { google } = require('googleapis');
 const cors = require('cors');
@@ -6,8 +6,43 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-const allowedOrigins = ['https://pisara25.fi', 'https://neulonbyajastamo.fi'];
-app.use(cors({ origin: allowedOrigins }));
+// === TÄMÄ LOHKO ON KORJATTU ===
+// Määritellään sallitut osoitteet
+const allowedOrigins = [
+  'https://pisara25.fi',
+  'https://neulonbyajastamo.fi',
+  'http://localhost:3000', // Lisätty localhostia varten (vaihda portti tarvittaessa)
+  'http://localhost:8080'  // Lisätty toinen yleinen testausportti
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Salli pyynnöt, joilla ei ole 'origin'-otsaketta (esim. Postman, mobiilisovellukset)
+    if (!origin) return callback(null, true);
+
+    // Tarkista, onko pyynnön 'origin' sallittujen listalla TAI sen 'www.'-alkuisena versiona
+    const isAllowed = allowedOrigins.some(allowedOrigin => {
+      // Salli suora osuma (esim. https://pisara25.fi)
+      if (origin === allowedOrigin) return true;
+      
+      // Salli www-aliverkkotunnus (esim. https://www.pisara25.fi)
+      if (allowedOrigin.startsWith('https://') && 
+          origin === 'https://www.' + allowedOrigin.substring(8)) return true;
+          
+      return false;
+    });
+
+    if (isAllowed) {
+      // Salli pyyntö
+      callback(null, true);
+    } else {
+      // Estä pyyntö
+      callback(new Error('Ei sallittu CORS-käytännön vuoksi'));
+    }
+  }
+}));
+// === CORS-KORJAUS PÄÄTTYY ===
+
 
 const parseNumberArray = (arr) => {
     if (!Array.isArray(arr)) return [];
@@ -77,7 +112,7 @@ app.get('/api/data', async (req, res) => {
     }
 });
 
-// === TÄMÄ LOHKO ON KORJATTU ===
+// Tämä on se lohko, jonka korjasimme aiemmin tuomaan väkiluvut
 app.get('/api/yrityskaavio', async (req, res) => {
     try {
         const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -87,7 +122,7 @@ app.get('/api/yrityskaavio', async (req, res) => {
         // 1. Haetaan vain kaksi ensimmäistä riviä (Labels ja Kpl)
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            range: 'Yrityksille!T1:X2', // Muutettu T1:X3 -> T1:X2
+            range: 'Yrityksille!T1:X2', // Haetaan vain Kpl-määrät
         });
         
         const chartValues = response.data.values || [];
@@ -95,7 +130,6 @@ app.get('/api/yrityskaavio', async (req, res) => {
         const ostojenMaara = parseNumberArray(chartValues[1]);
         
         // 2. Määritellään kuntien väkiluvut (suhdeluvut) manuaalisesti
-        // TÄRKEÄÄ: Järjestyksen TÄYTYY vastata Google Sheetsin T1:X1 -solujen järjestystä
         const KUNTIEN_VAKILUVUT = {
             "Inkoo": 5407,
             "Kirkkonummi": 41015,
@@ -107,11 +141,11 @@ app.get('/api/yrityskaavio', async (req, res) => {
         // 3. Luodaan suhdeluku-taulukko haettujen labelien perusteella
         const suhdeluvut = labels.map(kuntaNimi => KUNTIEN_VAKILUVUT[kuntaNimi] || 0);
 
-        // 4. Palautetaan data frontendille. Frontend osaa nyt laskea ostojenMaara / suhdeluku
+        // 4. Palautetaan data frontendille
         res.json({
             labels: labels,
             ostojenMaara: ostojenMaara,
-            suhdeluku: suhdeluvut // Palautetaan nyt kovakoodatut väkiluvut
+            suhdeluku: suhdeluvut
         });
 
     } catch (error) {
@@ -119,7 +153,6 @@ app.get('/api/yrityskaavio', async (req, res) => {
         res.status(500).json({ error: 'Yrityskaavion datan haku epäonnistui' });
     }
 });
-// === KORJAUS PÄÄTTYY ===
 
 
 app.get('/api/yrityslista', async (req, res) => {
@@ -145,19 +178,15 @@ app.get('/api/yrityslista', async (req, res) => {
     }
 });
 
-// --- TÄMÄ OSIO ON NYT PÄIVITETTY TIETOJESI MUKAAN ---
 app.get('/api/terveiset', async (req, res) => {
     try {
         const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
         const API_KEY = process.env.GOOGLE_API_KEY;
 
-        // Haetaan kaikki data 'Vastaukset'-välilehdeltä
         const kaikkiData = await fetchAndParseSheetData(API_KEY, SPREADSHEET_ID, 'Vastaukset!A:Z');
         
         const terveiset = kaikkiData
-            // 1. Suodatetaan rivit, joiden 'Hyväksytty'-sarakkeessa on 'k'
             .filter(row => row['Hyväksytty'] && String(row['Hyväksytty']).trim().toLowerCase() === 'k')
-            // 2. Muotoillaan data siistiin muotoon oikeilla sarakenimillä
             .map(row => ({
                 aikaleima: row['Aikaleima'] || '',
                 tervehdys: row['Tervehdys'] || '',
@@ -170,8 +199,8 @@ app.get('/api/terveiset', async (req, res) => {
         res.status(500).json({ error: 'Terveisten haku epäonnistui' });
     }
 });
-// ----------------------------------------------------
 
 app.listen(PORT, () => {
     console.log(`Palvelin käynnissä portissa ${PORT}`);
 });
+
