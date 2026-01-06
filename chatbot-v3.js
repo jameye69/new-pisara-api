@@ -1,4 +1,10 @@
 (function() {
+    // Ladataan Funnel Display -fontti Google Fontsista
+    const fontLink = document.createElement('link');
+    fontLink.rel = 'stylesheet';
+    fontLink.href = 'https://fonts.googleapis.com/css2?family=Funnel+Display:wght@400;700&display=swap';
+    document.head.appendChild(fontLink);
+
     const chatContainer = document.createElement('div');
     chatContainer.id = 'pisara-chat-box';
     chatContainer.innerHTML = `
@@ -6,32 +12,31 @@
             📦
         </div>
         <div id="chat-window" style="display: none; position: absolute; bottom: 60px; right: 0; width: 280px; border: 1px solid #ccc; background: white; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); overflow: hidden; flex-direction: column;">
-            <div id="chat-header" style="background: #f4ede7; color: #151515; padding: 12px; font-weight: bold; text-align: center; border-bottom: 1px solid #ccc; display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
+            <div id="chat-header" style="background: #f4ede7; color: #151515; padding: 12px; font-weight: bold; text-align: center; border-bottom: 1px solid #ccc; display: flex; justify-content: space-between; align-items: center; font-size: 15px; font-family: 'Funnel Display', sans-serif;">
                 <span>Tilausseuranta</span>
                 <span id="close-chat" style="cursor: pointer; font-size: 18px; line-height: 1;">×</span>
             </div>
-            <div id="chat-messages" style="height: 180px; overflow-y: auto; padding: 12px; font-size: 13px; color: #333;">
+            <div id="chat-messages" style="height: 180px; overflow-y: auto; padding: 12px; font-size: 14px; color: #333; font-family: 'Funnel Display', sans-serif;">
                 <p>Hei! Syötä tiedot seurataksesi tilaustasi.</p>
             </div>
-            <div id="chat-input-area" style="padding: 12px; border-top: 1px solid #eee; background: #f9f9f9;">
-                <input type="text" id="order-number" placeholder="Tilausnumero (#nba-2460)" style="width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 13px;">
-                <input type="email" id="customer-email" placeholder="Sähköpostiosoite" style="width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 13px;">
-                <button onclick="searchOrder()" style="background: #151515; color: white; width: 100%; border: none; padding: 10px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px;">Etsi tilaus</button>
+            <div id="chat-input-area" style="padding: 12px; border-top: 1px solid #eee; background: #f9f9f9; font-family: 'Funnel Display', sans-serif;">
+                <input type="text" id="order-number" placeholder="Tilausnumero (#nba-2460)" style="width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 14px; font-family: 'Funnel Display', sans-serif;">
+                <input type="email" id="customer-email" placeholder="Sähköpostiosoite" style="width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 14px; font-family: 'Funnel Display', sans-serif;">
+                <button onclick="searchOrder()" style="background: #151515; color: white; width: 100%; border: none; padding: 10px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; font-family: 'Funnel Display', sans-serif;">Etsi tilaus</button>
             </div>
         </div>
     `;
     document.body.appendChild(chatContainer);
 
-    // Sijainti: Nostettu Jotformin yläpuolelle ja säädetty oikea reuna linjaan
+    // Sijainti: Käytetään right: 13px ja fonttina Funnel Display
     Object.assign(chatContainer.style, {
         position: 'fixed',
         bottom: '85px', 
-        right: '12px',
+        right: '13px',
         zIndex: '10000',
-        fontFamily: 'Arial, sans-serif'
+        fontFamily: "'Funnel Display', sans-serif"
     });
 
-    // Mobiilisäädöt pidetään siisteinä
     const style = document.createElement('style');
     style.innerHTML = `
         @media screen and (max-width: 480px) {
@@ -68,8 +73,8 @@ async function searchOrder() {
     try {
         const response = await fetch(`https://new-pisara-api.onrender.com/api/chatbot/tilaus?numero=${encodeURIComponent(num)}&email=${encodeURIComponent(email)}`);
         const data = await response.json();
-        msgDiv.innerHTML = `<p style="padding: 10px; background: #f0f0f0; border-radius: 4px; margin-top: 5px; line-height: 1.4; font-size: 13px;">${data.viesti}</p>`;
+        msgDiv.innerHTML = `<p style="padding: 10px; background: #f0f0f0; border-radius: 4px; margin-top: 5px; line-height: 1.4; font-size: 14px;">${data.viesti}</p>`;
     } catch (e) {
-        msgDiv.innerHTML = `<p style="color: red; font-size: 13px;">Yhteysvirhe. Yritä uudelleen.</p>`;
+        msgDiv.innerHTML = `<p style="color: red; font-size: 14px;">Yhteysvirhe. Yritä uudelleen.</p>`;
     }
 }
