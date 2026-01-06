@@ -2,37 +2,56 @@
     const chatContainer = document.createElement('div');
     chatContainer.id = 'pisara-chat-box';
     chatContainer.innerHTML = `
-        <div id="chat-header" style="background: #f4ede7; color: #151515; padding: 10px 15px; cursor: pointer; border-radius: 8px 8px 0 0; font-weight: bold; text-align: center; border: 1px solid #ccc; border-bottom: none; font-size: 14px;">
-            Tilausseuranta
+        <div id="chat-button" style="background: #f4ede7; color: #151515; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid #ccc; box-shadow: 0 4px 10px rgba(0,0,0,0.2); font-size: 24px; font-weight: bold; position: absolute; bottom: 0; right: 0;">
+            📦
         </div>
-        <div id="chat-content" style="display: none; border: 1px solid #ccc; border-top: none; background: white; border-radius: 0 0 8px 8px;">
-            <div id="chat-messages" style="height: 250px; overflow-y: auto; padding: 15px; font-size: 13px; color: #333;">
-                <p>Hei! Syötä tilausnumero ja sähköposti seurataksesi tilaustasi.</p>
+        <div id="chat-window" style="display: none; position: absolute; bottom: 70px; right: 0; width: 300px; border: 1px solid #ccc; background: white; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); overflow: hidden; flex-direction: column;">
+            <div id="chat-header" style="background: #f4ede7; color: #151515; padding: 15px; font-weight: bold; text-align: center; border-bottom: 1px solid #ccc; display: flex; justify-content: space-between; align-items: center;">
+                <span>Tilausseuranta</span>
+                <span id="close-chat" style="cursor: pointer; font-size: 20px;">×</span>
             </div>
-            <div id="chat-input-area" style="padding: 12px; border-top: 1px solid #eee; background: #f9f9f9; display: flex; flex-direction: column;">
-                <input type="text" id="order-number" placeholder="Tilausnumero (esim. #nba-2460)" style="width: 100%; padding: 8px; margin-bottom: 6px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 13px;">
-                <input type="email" id="customer-email" placeholder="Sähköpostiosoite" style="width: 100%; padding: 8px; margin-bottom: 6px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 13px;">
-                <button onclick="searchOrder()" style="background: #151515; color: white; width: 100%; border: none; padding: 10px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px;">Etsi tilaus</button>
+            <div id="chat-messages" style="height: 200px; overflow-y: auto; padding: 15px; font-size: 14px; color: #333;">
+                <p>Hei! Syötä tiedot seurataksesi tilaustasi.</p>
+            </div>
+            <div id="chat-input-area" style="padding: 15px; border-top: 1px solid #eee; background: #f9f9f9;">
+                <input type="text" id="order-number" placeholder="Tilausnumero (#nba-2460)" style="width: 100%; padding: 10px; margin-bottom: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 14px;">
+                <input type="email" id="customer-email" placeholder="Sähköpostiosoite" style="width: 100%; padding: 10px; margin-bottom: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 14px;">
+                <button onclick="searchOrder()" style="background: #151515; color: white; width: 100%; border: none; padding: 12px; border-radius: 4px; cursor: pointer; font-weight: bold;">Etsi tilaus</button>
             </div>
         </div>
     `;
     document.body.appendChild(chatContainer);
 
-    // Asettelu: Aivan oikeaan alareunaan, sirompi leveys
+    // Säiliön perusasetukset
     Object.assign(chatContainer.style, {
-        position: 'fixed', 
-        bottom: '15px', 
-        right: '15px', 
-        width: '250px',
-        zIndex: '9998', 
-        boxShadow: '0 2px 10px rgba(0,0,0,0.1)', 
+        position: 'fixed',
+        bottom: '90px', // Nostetaan Jotform-agentin yläpuolelle
+        right: '20px',
+        zIndex: '10000',
         fontFamily: 'Arial, sans-serif'
     });
 
-    document.getElementById('chat-header').onclick = () => {
-        const content = document.getElementById('chat-content');
-        const isOpen = content.style.display === 'block';
-        content.style.display = isOpen ? 'none' : 'block';
+    // Mobiilisäädöt
+    const style = document.createElement('style');
+    style.innerHTML = `
+        @media screen and (max-width: 480px) {
+            #chat-window { width: 85vw !important; right: -10px !important; }
+        }
+    `;
+    document.head.appendChild(style);
+
+    const chatButton = document.getElementById('chat-button');
+    const chatWindow = document.getElementById('chat-window');
+    const closeChat = document.getElementById('close-chat');
+
+    chatButton.onclick = () => {
+        chatWindow.style.display = 'flex';
+        chatButton.style.display = 'none';
+    };
+
+    closeChat.onclick = () => {
+        chatWindow.style.display = 'none';
+        chatButton.style.display = 'flex';
     };
 })();
 
@@ -48,8 +67,8 @@ async function searchOrder() {
     try {
         const response = await fetch(`https://new-pisara-api.onrender.com/api/chatbot/tilaus?numero=${encodeURIComponent(num)}&email=${encodeURIComponent(email)}`);
         const data = await response.json();
-        msgDiv.innerHTML = `<p style="padding: 10px; background: #f0f0f0; border-radius: 4px; margin-top: 5px; line-height: 1.4; font-size: 13px;">${data.viesti}</p>`;
+        msgDiv.innerHTML = `<p style="padding: 10px; background: #f0f0f0; border-radius: 4px; margin-top: 5px; line-height: 1.4;">${data.viesti}</p>`;
     } catch (e) {
-        msgDiv.innerHTML = `<p style="color: red; font-size: 13px;">Yhteysvirhe. Yritä uudelleen.</p>`;
+        msgDiv.innerHTML = `<p style="color: red;">Yhteysvirhe. Yritä uudelleen.</p>`;
     }
 }
