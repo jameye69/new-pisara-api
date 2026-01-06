@@ -31,7 +31,7 @@
     // Sijainti: Käytetään right: 13px ja fonttina Funnel Display
     Object.assign(chatContainer.style, {
         position: 'fixed',
-        bottom: '85px', 
+        bottom: '105px', 
         right: '13px',
         zIndex: '10000',
         fontFamily: "'Funnel Display', sans-serif"
