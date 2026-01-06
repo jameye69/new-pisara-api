@@ -226,5 +226,8 @@ app.get('/auth/callback', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Palvelin käynnissä portissa ${PORT}`);
 });
+app.get('/chatbot-v3.js', (req, res) => {
+  res.sendFile(__dirname + '/chatbot-v3.js');
+});
 
 
