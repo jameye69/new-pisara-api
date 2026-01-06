@@ -29,10 +29,10 @@
 
     Object.assign(chatContainer.style, {
         position: 'fixed',
-        bottom: '8px', 
+        bottom: '85px', // Palautettu aiempaan korkeuteen
         right: '15px', 
         width: '45px',
-        zIndex: '2147483647', // Suurin mahdollinen z-index
+        zIndex: '2147483647', // Maksimoitu z-index
         fontFamily: "'Funnel Display', sans-serif"
     });
 
@@ -47,7 +47,6 @@
         }
         #chat-button:hover { transform: scale(1.05); }
 
-        /* Pakotetaan Jotform ja sen osat pysymään seurantaikkunan alla */
         .jfAgent-greeting, 
         .jfAgent-bubble, 
         [class*="greeting"], 
