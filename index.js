@@ -1,4 +1,4 @@
-// LOPULLINEN JA TOIMIVA BACKEND-KOODI (V6.6 - Shopify-varmistettu)
+// LOPULLINEN JA TOIMIVA BACKEND-KOODI (V6.7 - Suora Access Token haku selaimeen)
 const express = require('express');
 const { google } = require('googleapis');
 const cors = require('cors');
@@ -51,7 +51,8 @@ const fetchAndParseSheetData = async (auth, spreadsheetId, range) => {
     });
 };
 
-// Google Sheets -reitit ennallaan...
+// --- API-REITIT ---
+
 app.get('/api/data', async (req, res) => {
     try {
         const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -144,6 +145,7 @@ app.get('/api/haasteet', async (req, res) => {
 });
 
 // --- SHOP_BOTIN TILAUSHAKU ---
+
 app.get('/api/chatbot/tilaus', async (req, res) => {
     const { numero, email } = req.query;
     const shop = process.env.SHOP_URL || "neulon-by-ajastamo.myshopify.com";
@@ -177,29 +179,21 @@ app.get('/api/chatbot/tilaus', async (req, res) => {
     }
 });
 
-// Aktivoi yhteys
+// --- SHOPIFY VALTUUTUS (OAUTH) ---
+
 app.get('/auth', (req, res) => {
     const shop = process.env.SHOP_URL || "neulon-by-ajastamo.myshopify.com";
     const apiKey = process.env.SHOPIFY_API_KEY;
-    // Käytetään Renderin host-nimeä ja pakotetaan https
     const host = req.get('host');
     const redirectUri = `https://${host}/auth/callback`;
     const installUrl = `https://${shop}/admin/oauth/authorize?client_id=${apiKey}&scope=read_orders&redirect_uri=${redirectUri}`;
     res.redirect(installUrl);
 });
 
-app.get('/auth/callback', (req, res) => {
-    res.send("Yhteys muodostettu! Voit nyt testata tilaushakua.");
-});
-
-app.listen(PORT, () => {
-    console.log(`Palvelin käynnissä portissa ${PORT}`);
-});
-// Päivitetty auth/callback-reitti
 app.get('/auth/callback', async (req, res) => {
     const { shop, code } = req.query;
     const apiKey = process.env.SHOPIFY_API_KEY;
-    const apiSecret = process.env.SHOPIFY_API_SECRET; // Tässä on oltava shpss-alkuinen koodi
+    const apiSecret = process.env.SHOPIFY_API_SECRET; // Tässä oltava aluksi shpss-alkuinen koodi
 
     try {
         const response = await axios.post(`https://${shop}/admin/oauth/access_token`, {
@@ -208,12 +202,26 @@ app.get('/auth/callback', async (req, res) => {
             code
         });
         
-        // TÄMÄ ON SE RATKAISEVA RIVI:
-        console.log("KOPIOI TÄMÄ RENDERIIN (shpat_...):", response.data.access_token);
+        const accessToken = response.data.access_token;
+        console.log("KOPIOI TÄMÄ RENDERIIN (shpat_...):", accessToken);
         
-        res.send("Valtuutus onnistui! Katso shpat-koodi Renderin lokeista (Logs) ja päivitä se Environment-asetuksiin.");
+        // NÄYTETÄÄN KOODI SELAIMESSA
+        res.send(`
+            <div style="font-family:sans-serif; padding:40px; text-align:center;">
+                <h1 style="color:#2c3e50;">Valtuutus onnistui!</h1>
+                <p>Kopioi alla oleva koodi Renderin <b>Environment</b>-asetuksiin muuttujan <b>SHOPIFY_API_SECRET</b> arvoksi:</p>
+                <div style="background:#f4f4f4; padding:20px; border-radius:8px; font-family:monospace; font-size:20px; display:inline-block; margin:20px 0; border:1px solid #ccc;">
+                    ${accessToken}
+                </div>
+                <p style="color:#7f8c8d;">Kun olet tallentanut koodin Renderiin, tilaushaku alkaa toimia.</p>
+            </div>
+        `);
     } catch (e) {
         console.error("Valtuutusvirhe:", e.response ? e.response.data : e.message);
-        res.status(500).send("Virhe valtuutuksessa.");
+        res.status(500).send("Virhe valtuutuksessa. Varmista, että SHOPIFY_API_SECRET on Renderissä shpss-alkuinen.");
     }
+});
+
+app.listen(PORT, () => {
+    console.log(`Palvelin käynnissä portissa ${PORT}`);
 });
