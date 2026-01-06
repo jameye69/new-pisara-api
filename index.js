@@ -2,6 +2,7 @@
 const express = require('express');
 const { google } = require('googleapis');
 const cors = require('cors');
+const axios = require('axios');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -271,40 +272,40 @@ app.listen(PORT, () => {
     console.log(`Palvelin käynnissä portissa ${PORT}`);
 });
 // --- SHOP_BOTIN TILAUSHAKU ALKAA ---
-// Tämä reitti vastaa kyselyihin osoitteessa /api/chatbot/tilaus
 app.get('/api/chatbot/tilaus', async (req, res) => {
     const { numero, email } = req.query;
     
+    // Käytetään niitä nimiä, jotka ovat Renderissä: SHOP_URL ja SHOPIFY_API_SECRET
+    const shop = process.env.SHOP_URL || "neulon-by-ajastamo.myshopify.com";
+    const token = process.env.SHOPIFY_API_SECRET; 
+
     if (!numero || !email) {
         return res.status(400).json({ viesti: "Tilausnumero ja sähköposti puuttuvat." });
     }
 
     try {
-        // Haetaan tilaus Shopifysta käyttämällä Renderiin tallennettuja muuttujia
-        const response = await axios.get(`https://${process.env.SHOPIFY_DOMAIN}/admin/api/2024-01/orders.json?name=${numero}&status=any`, {
+        // Huom: axios pitää olla määritelty koodin alussa: const axios = require('axios');
+        const response = await axios.get(`https://${shop}/admin/api/2024-01/orders.json?name=${encodeURIComponent(numero)}&status=any`, {
             headers: { 
-                'X-Shopify-Access-Token': process.env.SHOPIFY_API_SECRET,
+                'X-Shopify-Access-Token': token,
                 'Content-Type': 'application/json'
             }
         });
 
-        // Etsitään listasta tilaus, jonka sähköposti täsmää
         const tilaus = response.data.orders.find(o => o.email.toLowerCase() === email.toLowerCase());
 
         if (tilaus) {
-            // Suomennetaan tilat asiakkaalle sopiviksi
             let tila = "Käsittelyssä";
             if (tilaus.fulfillment_status === 'fulfilled') tila = "Lähetetty";
             if (tilaus.cancelled_at) tila = "Peruttu";
-
             res.json({ viesti: `Tilauksesi (${tilaus.name}) tila on: ${tila}.` });
         } else {
-            res.json({ viesti: "Tilausta ei löytynyt tällä numerolla ja sähköpostilla." });
+            res.json({ viesti: "Tilausta ei löytynyt näillä tiedoilla. Tarkista numero (esim. #1001)." });
         }
     } catch (e) {
         console.error("Shopify-virhe:", e.message);
-        res.status(500).json({ viesti: "Yhteys kauppaan epäonnistui. Kokeile myöhemmin uudelleen." });
+        // Jos token on väärä (shpss vs shpat), tullaan tänne
+        res.status(500).json({ viesti: "Yhteys kauppaan vaatii shpat-alkuisen avaimen." });
     }
 });
-// --- SHOP_BOTIN TILAUSHAKU PÄÄTTYY ---
 
