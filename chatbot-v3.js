@@ -10,7 +10,7 @@
         <div id="chat-button" style="background: #f4ede7; color: #151515; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid #ccc; box-shadow: 0 4px 10px rgba(0,0,0,0.2); font-size: 20px; position: absolute; bottom: 0; right: 0; transition: transform 0.2s ease;">
             📦
         </div>
-        <div id="chat-window" style="display: none; position: absolute; bottom: 0; right: -5px; width: 280px; border: 1px solid #ccc; background: white; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); overflow: hidden; flex-direction: column;">
+        <div id="chat-window" style="display: none; position: absolute; bottom: 0; right: 0; width: 260px; border: 1px solid #ccc; background: white; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); overflow: hidden; flex-direction: column;">
             <div id="chat-header" style="background: #f4ede7; color: #151515; padding: 12px; font-weight: bold; text-align: center; border-bottom: 1px solid #ccc; display: flex; justify-content: space-between; align-items: center; font-size: 15px; font-family: 'Funnel Display', sans-serif;">
                 <span>Tilausseuranta</span>
                 <span id="close-chat" style="cursor: pointer; font-size: 18px; line-height: 1;">×</span>
@@ -30,7 +30,7 @@
     Object.assign(chatContainer.style, {
         position: 'fixed',
         bottom: '85px', 
-        right: '18px', // Säädetty hieman keskemmälle suhteessa Jotformiin
+        right: '18px', 
         width: '45px',
         zIndex: '10000',
         fontFamily: "'Funnel Display', sans-serif"
@@ -40,15 +40,22 @@
     style.innerHTML = `
         @media screen and (max-width: 480px) {
             #chat-window { 
-                width: 75vw !important; 
-                right: -10px !important;
-                max-width: 300px;
-            }
-            #pisara-chat-box {
-                right: 15px !important;
+                width: 240px !important; 
+                right: -5px !important;
             }
         }
         #chat-button:hover { transform: scale(1.05); }
+
+        /* TÄMÄ PIILOTTAA JOTFORMIN TERVEHDYKSEN VÄKISIN */
+        .jfAgent-greeting, 
+        .jfAgent-bubble, 
+        [class*="greeting"], 
+        [class*="jf-agent-welcome"] { 
+            display: none !important; 
+            opacity: 0 !important; 
+            visibility: hidden !important; 
+            pointer-events: none !important;
+        }
     `;
     document.head.appendChild(style);
 
