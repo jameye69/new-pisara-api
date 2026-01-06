@@ -270,4 +270,32 @@ app.get('/api/haasteet', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Palvelin käynnissä portissa ${PORT}`);
 });
+// --- CHATBOTIN TILAUSHAKU ALKAA ---
+app.get('/api/chatbot/tilaus', async (req, res) => {
+    const { numero, email } = req.query;
+    
+    if (!numero || !email) {
+        return res.status(400).json({ viesti: "Tilausnumero ja sähköposti puuttuvat." });
+    }
+
+    try {
+        const response = await axios.get(`https://${process.env.SHOPIFY_DOMAIN}/admin/api/2024-01/orders.json?name=${numero}&status=any`, {
+            headers: { 'X-Shopify-Access-Token': process.env.SHOPIFY_API_SECRET }
+        });
+
+        // Etsitään tilaus, joka täsmää sähköpostiin
+        const tilaus = response.data.orders.find(o => o.email.toLowerCase() === email.toLowerCase());
+
+        if (tilaus) {
+            const tila = tilaus.fulfillment_status === 'fulfilled' ? 'Lähetetty' : 'Käsittelyssä';
+            res.json({ viesti: `Tilauksesi (${tilaus.name}) tila on: ${tila}.` });
+        } else {
+            res.json({ viesti: "Tilausta ei löytynyt tällä numerolla ja sähköpostilla." });
+        }
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ viesti: "Yhteys Shopifyyn epäonnistui." });
+    }
+});
+// --- CHATBOTIN TILAUSHAKU PÄÄTTYY ---
 
