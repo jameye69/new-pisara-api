@@ -195,3 +195,25 @@ app.get('/auth/callback', (req, res) => {
 app.listen(PORT, () => {
     console.log(`Palvelin käynnissä portissa ${PORT}`);
 });
+// Päivitetty auth/callback-reitti
+app.get('/auth/callback', async (req, res) => {
+    const { shop, code } = req.query;
+    const apiKey = process.env.SHOPIFY_API_KEY;
+    const apiSecret = process.env.SHOPIFY_API_SECRET; // Tässä on oltava shpss-alkuinen koodi
+
+    try {
+        const response = await axios.post(`https://${shop}/admin/oauth/access_token`, {
+            client_id: apiKey,
+            client_secret: apiSecret,
+            code
+        });
+        
+        // TÄMÄ ON SE RATKAISEVA RIVI:
+        console.log("KOPIOI TÄMÄ RENDERIIN (shpat_...):", response.data.access_token);
+        
+        res.send("Valtuutus onnistui! Katso shpat-koodi Renderin lokeista (Logs) ja päivitä se Environment-asetuksiin.");
+    } catch (e) {
+        console.error("Valtuutusvirhe:", e.response ? e.response.data : e.message);
+        res.status(500).send("Virhe valtuutuksessa.");
+    }
+});
