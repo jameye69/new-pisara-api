@@ -1,8 +1,8 @@
-// LOPULLINEN JA TOIMIVA BACKEND-KOODI (V6.5 - Shopify-korjauksilla)
+// LOPULLINEN JA TOIMIVA BACKEND-KOODI (V6.6 - Shopify-varmistettu)
 const express = require('express');
 const { google } = require('googleapis');
 const cors = require('cors');
-const axios = require('axios'); // Varmistettu määritys
+const axios = require('axios');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -51,6 +51,7 @@ const fetchAndParseSheetData = async (auth, spreadsheetId, range) => {
     });
 };
 
+// Google Sheets -reitit ennallaan...
 app.get('/api/data', async (req, res) => {
     try {
         const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -145,10 +146,8 @@ app.get('/api/haasteet', async (req, res) => {
 // --- SHOP_BOTIN TILAUSHAKU ---
 app.get('/api/chatbot/tilaus', async (req, res) => {
     const { numero, email } = req.query;
-    
-    // Käytetään Renderin muuttujia
     const shop = process.env.SHOP_URL || "neulon-by-ajastamo.myshopify.com";
-    const token = process.env.SHOPIFY_API_SECRET; // Käyttää shpss_ -alkuista koodia
+    const token = process.env.SHOPIFY_API_SECRET; 
 
     if (!numero || !email) {
         return res.status(400).json({ viesti: "Tilausnumero ja sähköposti puuttuvat." });
@@ -162,27 +161,29 @@ app.get('/api/chatbot/tilaus', async (req, res) => {
             }
         });
 
-        const tilaus = response.data.orders.find(o => o.email.toLowerCase() === email.toLowerCase());
-
-        if (tilaus) {
-            let tila = "Käsittelyssä";
-            if (tilaus.fulfillment_status === 'fulfilled') tila = "Lähetetty";
-            if (tilaus.cancelled_at) tila = "Peruttu";
-            res.json({ viesti: `Tilauksesi (${tilaus.name}) tila on: ${tila}.` });
-        } else {
-            res.json({ viesti: "Tilausta ei löytynyt näillä tiedoilla. Tarkista numero (esim. #1001)." });
+        if (response.data && response.data.orders) {
+            const tilaus = response.data.orders.find(o => o.email.toLowerCase() === email.toLowerCase());
+            if (tilaus) {
+                let tila = "Käsittelyssä";
+                if (tilaus.fulfillment_status === 'fulfilled') tila = "Lähetetty";
+                if (tilaus.cancelled_at) tila = "Peruttu";
+                return res.json({ viesti: `Tilauksesi (${tilaus.name}) tila on: ${tila}.` });
+            }
         }
+        res.json({ viesti: "Tilausta ei löytynyt näillä tiedoilla. Tarkista numero (esim. #1001)." });
     } catch (e) {
         console.error("Shopify-virhe:", e.message);
         res.status(500).json({ viesti: "Yhteys kauppaan vaatii valtuutuksen osoitteessa /auth" });
     }
 });
 
-// TÄMÄ ON TÄRKEÄ: Aktivoi yhteys ilman shpat-koodia
+// Aktivoi yhteys
 app.get('/auth', (req, res) => {
     const shop = process.env.SHOP_URL || "neulon-by-ajastamo.myshopify.com";
     const apiKey = process.env.SHOPIFY_API_KEY;
-    const redirectUri = `https://${req.get('host')}/auth/callback`;
+    // Käytetään Renderin host-nimeä ja pakotetaan https
+    const host = req.get('host');
+    const redirectUri = `https://${host}/auth/callback`;
     const installUrl = `https://${shop}/admin/oauth/authorize?client_id=${apiKey}&scope=read_orders&redirect_uri=${redirectUri}`;
     res.redirect(installUrl);
 });
