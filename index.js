@@ -30,7 +30,7 @@ app.use(cors({
   }
 }));
 
-// --- TILAUSHAKU LOKITUKSELLA ---
+// --- TILAUSHAKU LOKITUKSELLA JA PARANNETULLA VERTAILULLA ---
 
 app.get('/api/chatbot/tilaus', async (req, res) => {
     let { numero, email } = req.query;
@@ -64,11 +64,14 @@ app.get('/api/chatbot/tilaus', async (req, res) => {
         console.log(`Shopify vastasi. Tilauksia löytyi: ${orders.length}`);
 
         if (orders.length > 0) {
-            // Etsitään tilaus, jonka sähköposti täsmää
-            const tilaus = orders.find(o => o.email && o.email.toLowerCase() === customerEmail);
+            // Etsitään tilaus, puhdistetaan molemmat sähköpostit välilyönneistä vertailua varten
+            const tilaus = orders.find(o => {
+                const shopifyEmail = (o.email || "").trim().toLowerCase();
+                return shopifyEmail === customerEmail;
+            });
 
             if (tilaus) {
-                console.log(`Tilaus löytyi! Status: ${tilaus.fulfillment_status}`);
+                console.log(`Tilaus löytyi! Sähköposti täsmää.`);
                 let tila = "Käsittelyssä";
                 if (tilaus.fulfillment_status === 'fulfilled') tila = "Lähetetty";
                 if (tilaus.cancelled_at) tila = "Peruttu";
@@ -77,7 +80,11 @@ app.get('/api/chatbot/tilaus', async (req, res) => {
                     viesti: `Tilauksesi (${tilaus.name}) tila on: ${tila}.` 
                 });
             } else {
-                console.log(`Tilausnumero löytyi, mutta sähköposti ei täsmää. (Odotettiin: ${customerEmail})`);
+                // Lokitetaan Shopifyn palauttama sähköposti, jotta nähdään miksi vertailu epäonnistui
+                const actualEmailInShopify = orders[0].email;
+                console.log(`Sähköposti ei täsmää.`);
+                console.log(`Käyttäjä syötti: "${customerEmail}"`);
+                console.log(`Shopifyssa on: "${actualEmailInShopify}"`);
             }
         }
         
@@ -95,7 +102,8 @@ app.get('/api/chatbot/tilaus', async (req, res) => {
     }
 });
 
-// --- GOOGLE SHEETS (pidetään ennallaan) ---
+// --- GOOGLE SHEETS (ennallaan) ---
+
 app.get('/api/data', async (req, res) => {
     try {
         const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
