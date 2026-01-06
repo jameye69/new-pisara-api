@@ -7,7 +7,7 @@
         </div>
         <div id="chat-content" style="display: none; border: 1px solid #ccc; border-top: none; background: white; border-radius: 0 0 8px 8px;">
             <div id="chat-messages" style="height: 250px; overflow-y: auto; padding: 15px; font-size: 13px; color: #333;">
-                <p>Hei! Syötä tilausnumerosi ja sähköpostisi seurataksesi tilausta.</p>
+                <p>Hei! Syötä tilausnumero ja sähköposti seurataksesi tilaustasi.</p>
             </div>
             <div id="chat-input-area" style="padding: 12px; border-top: 1px solid #eee; background: #f9f9f9; display: flex; flex-direction: column;">
                 <input type="text" id="order-number" placeholder="Tilausnumero (esim. #nba-2460)" style="width: 100%; padding: 8px; margin-bottom: 6px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 13px;">
