@@ -2,7 +2,7 @@
     const chatContainer = document.createElement('div');
     chatContainer.id = 'pisara-chat-box';
     chatContainer.innerHTML = `
-        <div id="chat-header" style="background: #f4ede7 color: white; padding: 15px; cursor: pointer; border-radius: 8px 8px 0 0; font-weight: bold; text-align: center;">
+        <div id="chat-header" style="background: #f4ede7; color: #151515; padding: 15px; cursor: pointer; border-radius: 8px 8px 0 0; font-weight: bold; text-align: center; border: 1px solid #ccc; border-bottom: none;">
             Tilausseuranta
         </div>
         <div id="chat-content" style="display: none; border: 1px solid #ccc; border-top: none; background: white; border-radius: 0 0 8px 8px;">
@@ -41,8 +41,6 @@ async function searchOrder() {
     try {
         const response = await fetch(`https://new-pisara-api.onrender.com/api/chatbot/tilaus?numero=${encodeURIComponent(num)}&email=${encodeURIComponent(email)}`);
         const data = await response.json();
-        
-        // Näytetään vastaus selkeästi
         msgDiv.innerHTML = `<p style="padding: 10px; background: #f0f0f0; border-radius: 4px; margin-top: 5px; line-height: 1.4;">${data.viesti}</p>`;
     } catch (e) {
         msgDiv.innerHTML = `<p style="color: red;">Yhteysvirhe seurantaan. Yritä uudelleen hetken kuluttua.</p>`;
