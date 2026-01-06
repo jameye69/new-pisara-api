@@ -30,29 +30,27 @@ app.use(cors({
   }
 }));
 
-// --- TILAUSHAKU LOKITUKSELLA JA PARANNETULLA VERTAILULLA ---
+// --- TILAUSHAKU (TOIMII MYÖS POS-TILAUKSISSA) ---
 
 app.get('/api/chatbot/tilaus', async (req, res) => {
     let { numero, email } = req.query;
     const shop = process.env.SHOP_URL || "neulon-by-ajastamo.myshopify.com";
     const token = process.env.SHOPIFY_API_SECRET; 
 
-    console.log(`--- UUSI HAKU ---`);
-    console.log(`Syötteet -> Numero: "${numero}", Email: "${email}"`);
+    console.log(`--- TILAUSHAKU ---`);
+    console.log(`Numero: "${numero}", Syötetty email: "${email}"`);
 
-    if (!numero || !email) {
-        return res.status(400).json({ viesti: "Tilausnumero ja sähköposti puuttuvat." });
+    if (!numero) {
+        return res.status(400).json({ viesti: "Tilausnumero puuttuu." });
     }
 
     try {
         const searchName = numero.trim();
-        const customerEmail = email.trim().toLowerCase();
+        const customerEmail = (email || "").trim().toLowerCase();
 
-        // Tehdään kysely Shopifyyn
+        // Haetaan tilaus Shopifysta
         const url = `https://${shop}/admin/api/2024-01/orders.json?name=${encodeURIComponent(searchName)}&status=any`;
         
-        console.log(`Kysely Shopifylle: ${url}`);
-
         const response = await axios.get(url, {
             headers: { 
                 'X-Shopify-Access-Token': token,
@@ -61,44 +59,34 @@ app.get('/api/chatbot/tilaus', async (req, res) => {
         });
 
         const orders = response.data.orders || [];
-        console.log(`Shopify vastasi. Tilauksia löytyi: ${orders.length}`);
 
         if (orders.length > 0) {
-            // Etsitään tilaus, puhdistetaan molemmat sähköpostit välilyönneistä vertailua varten
-            const tilaus = orders.find(o => {
-                const shopifyEmail = (o.email || "").trim().toLowerCase();
-                return shopifyEmail === customerEmail;
-            });
+            const tilaus = orders[0];
+            const shopifyEmail = (tilaus.email || "").trim().toLowerCase();
 
-            if (tilaus) {
-                console.log(`Tilaus löytyi! Sähköposti täsmää.`);
+            // LOGIIKKA:
+            // 1. Jos Shopifyssa ei ole sähköpostia (POS-tilaus), näytetään tila.
+            // 2. Jos Shopifyssa on sähköposti, sen on täsmättävä käyttäjän syöttämään.
+            if (shopifyEmail === "" || shopifyEmail === customerEmail) {
+                console.log(`Haku hyväksytty (Email täsmäsi tai oli tyhjä Shopifyssa).`);
                 let tila = "Käsittelyssä";
-                if (tilaus.fulfillment_status === 'fulfilled') tila = "Lähetetty";
+                if (tilaus.fulfillment_status === 'fulfilled') tila = "Lähetetty / Valmis";
                 if (tilaus.cancelled_at) tila = "Peruttu";
                 
                 return res.json({ 
                     viesti: `Tilauksesi (${tilaus.name}) tila on: ${tila}.` 
                 });
             } else {
-                // Lokitetaan Shopifyn palauttama sähköposti, jotta nähdään miksi vertailu epäonnistui
-                const actualEmailInShopify = orders[0].email;
-                console.log(`Sähköposti ei täsmää.`);
-                console.log(`Käyttäjä syötti: "${customerEmail}"`);
-                console.log(`Shopifyssa on: "${actualEmailInShopify}"`);
+                console.log(`Sähköpostit eivät täsmää: "${customerEmail}" vs "${shopifyEmail}"`);
+                return res.json({ viesti: "Tilaus löytyi, mutta sähköpostiosoite ei täsmää tilauksen tietoihin." });
             }
         }
         
-        res.json({ viesti: "Tilausta ei löytynyt. Varmista, että tilausnumero (esim. #nba-2460) ja sähköposti ovat täsmälleen oikein." });
+        res.json({ viesti: "Tilausta ei löytynyt. Varmista, että tilausnumero (esim. #nba-2460) on oikein." });
         
     } catch (e) {
-        console.error("!!! SHOPIFY VIRHE !!!");
-        if (e.response) {
-            console.error("Status:", e.response.status);
-            console.error("Data:", JSON.stringify(e.response.data));
-        } else {
-            console.error("Viesti:", e.message);
-        }
-        res.status(500).json({ viesti: "Yhteys kauppaan epäonnistui. Yritä myöhemmin uudelleen." });
+        console.error("Shopify-virhe:", e.message);
+        res.status(500).json({ viesti: "Yhteys tilauspalveluun epäonnistui." });
     }
 });
 
