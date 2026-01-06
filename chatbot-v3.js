@@ -20,7 +20,7 @@
                 <p>Hei! Syötä tiedot seurataksesi tilaustasi.</p>
             </div>
             <div id="chat-input-area" style="padding: 12px; border-top: 1px solid #eee; background: #f9f9f9; font-family: 'Funnel Display', sans-serif;">
-                <input type="text" id="order-number" placeholder="Tilausnumero (#nba-2460)" style="width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 14px; font-family: 'Funnel Display', sans-serif;">
+                <input type="text" id="order-number" placeholder="Tilausnumero (#nba-1234)" style="width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 14px; font-family: 'Funnel Display', sans-serif;">
                 <input type="email" id="customer-email" placeholder="Sähköpostiosoite" style="width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 14px; font-family: 'Funnel Display', sans-serif;">
                 <button onclick="searchOrder()" style="background: #151515; color: white; width: 100%; border: none; padding: 10px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; font-family: 'Funnel Display', sans-serif;">Etsi tilaus</button>
             </div>
@@ -28,7 +28,7 @@
     `;
     document.body.appendChild(chatContainer);
 
-    // Sijainti: Käytetään right: 13px ja fonttina Funnel Display
+    // Sijainti: ja fonttina Funnel Display
     Object.assign(chatContainer.style, {
         position: 'fixed',
         bottom: '105px', 
