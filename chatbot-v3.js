@@ -10,7 +10,7 @@
         <div id="chat-button" style="background: #f4ede7; color: #151515; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid #ccc; box-shadow: 0 4px 10px rgba(0,0,0,0.2); font-size: 20px; position: absolute; bottom: 0; right: 0; transition: transform 0.2s ease;">
             📦
         </div>
-        <div id="chat-window" style="display: none; position: absolute; bottom: 0; right: 60px; width: 260px; border: 1px solid #ccc; background: white; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); overflow: hidden; flex-direction: column;">
+        <div id="chat-window" style="display: none; position: absolute; bottom: 0; right: 0; width: 260px; border: 1px solid #ccc; background: white; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); overflow: hidden; flex-direction: column;">
             <div id="chat-header" style="background: #f4ede7; color: #151515; padding: 12px; font-weight: bold; text-align: center; border-bottom: 1px solid #ccc; display: flex; justify-content: space-between; align-items: center; font-size: 15px; font-family: 'Funnel Display', sans-serif;">
                 <span>Tilausseuranta</span>
                 <span id="close-chat" style="cursor: pointer; font-size: 18px; line-height: 1;">×</span>
@@ -29,10 +29,10 @@
 
     Object.assign(chatContainer.style, {
         position: 'fixed',
-        bottom: '85px', // Palautettu aiempaan korkeuteen
+        bottom: '85px', 
         right: '15px', 
         width: '45px',
-        zIndex: '2147483647', // Maksimoitu z-index
+        zIndex: '2147483647', 
         fontFamily: "'Funnel Display', sans-serif"
     });
 
