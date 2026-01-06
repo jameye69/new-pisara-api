@@ -5,7 +5,7 @@ const cors = require('cors');
 const axios = require('axios');
 
 const app = express();
-app.use(express.static('public'));
+app.use(express.static(__dirname));
 const PORT = process.env.PORT || 3001;
 
 // Määritellään sallitut osoitteet
@@ -226,4 +226,5 @@ app.get('/auth/callback', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Palvelin käynnissä portissa ${PORT}`);
 });
+
 
