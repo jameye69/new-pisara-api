@@ -270,7 +270,8 @@ app.get('/api/haasteet', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Palvelin käynnissä portissa ${PORT}`);
 });
-// --- CHATBOTIN TILAUSHAKU ALKAA ---
+// --- SHOP_BOTIN TILAUSHAKU ALKAA ---
+// Tämä reitti vastaa kyselyihin osoitteessa /api/chatbot/tilaus
 app.get('/api/chatbot/tilaus', async (req, res) => {
     const { numero, email } = req.query;
     
@@ -279,23 +280,31 @@ app.get('/api/chatbot/tilaus', async (req, res) => {
     }
 
     try {
+        // Haetaan tilaus Shopifysta käyttämällä Renderiin tallennettuja muuttujia
         const response = await axios.get(`https://${process.env.SHOPIFY_DOMAIN}/admin/api/2024-01/orders.json?name=${numero}&status=any`, {
-            headers: { 'X-Shopify-Access-Token': process.env.SHOPIFY_API_SECRET }
+            headers: { 
+                'X-Shopify-Access-Token': process.env.SHOPIFY_API_SECRET,
+                'Content-Type': 'application/json'
+            }
         });
 
-        // Etsitään tilaus, joka täsmää sähköpostiin
+        // Etsitään listasta tilaus, jonka sähköposti täsmää
         const tilaus = response.data.orders.find(o => o.email.toLowerCase() === email.toLowerCase());
 
         if (tilaus) {
-            const tila = tilaus.fulfillment_status === 'fulfilled' ? 'Lähetetty' : 'Käsittelyssä';
+            // Suomennetaan tilat asiakkaalle sopiviksi
+            let tila = "Käsittelyssä";
+            if (tilaus.fulfillment_status === 'fulfilled') tila = "Lähetetty";
+            if (tilaus.cancelled_at) tila = "Peruttu";
+
             res.json({ viesti: `Tilauksesi (${tilaus.name}) tila on: ${tila}.` });
         } else {
             res.json({ viesti: "Tilausta ei löytynyt tällä numerolla ja sähköpostilla." });
         }
     } catch (e) {
-        console.error(e);
-        res.status(500).json({ viesti: "Yhteys Shopifyyn epäonnistui." });
+        console.error("Shopify-virhe:", e.message);
+        res.status(500).json({ viesti: "Yhteys kauppaan epäonnistui. Kokeile myöhemmin uudelleen." });
     }
 });
-// --- CHATBOTIN TILAUSHAKU PÄÄTTYY ---
+// --- SHOP_BOTIN TILAUSHAKU PÄÄTTYY ---
 
