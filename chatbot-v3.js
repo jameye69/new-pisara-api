@@ -32,7 +32,7 @@
         bottom: '85px', 
         right: '15px', 
         width: '45px',
-        height: '45px', // Aluksi vain napin kokoinen
+        height: '45px',
         zIndex: '2147483647', 
         fontFamily: "'Funnel Display', sans-serif"
     });
@@ -48,10 +48,14 @@
         }
         #chat-button:hover { transform: scale(1.05); }
 
-        /* Piilotetaan Jotform-häiriöt */
-        .jfAgent-greeting, .jfAgent-bubble, [class*="greeting"], [class*="bubble"] { 
+        /* Kohdistetaan piilotus VAIN Jotform-agentin teknisiin osiin */
+        .jfAgent-greeting, 
+        .jfAgent-bubble, 
+        #jfAgent-welcome-message,
+        div[class^="jfAgent"] { 
             display: none !important; 
             opacity: 0 !important; 
+            visibility: hidden !important;
         }
     `;
     document.head.appendChild(style);
@@ -61,7 +65,7 @@
     const closeChat = document.getElementById('close-chat');
 
     chatButton.onclick = () => {
-        chatContainer.style.width = '260px'; // Laajennetaan säiliö ikkunan kokoiseksi
+        chatContainer.style.width = '260px';
         chatContainer.style.height = 'auto';
         chatWindow.style.display = 'flex';
         chatButton.style.display = 'none';
@@ -70,7 +74,7 @@
     closeChat.onclick = () => {
         chatWindow.style.display = 'none';
         chatButton.style.display = 'flex';
-        chatContainer.style.width = '45px'; // Palautetaan napin kokoiseksi
+        chatContainer.style.width = '45px';
         chatContainer.style.height = '45px';
     };
 })();
