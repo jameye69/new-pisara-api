@@ -40,22 +40,15 @@
     const style = document.createElement('style');
     style.innerHTML = `
         @media screen and (max-width: 480px) {
-            #chat-window { 
-                width: 260px !important; 
-                right: 0 !important;
-                bottom: 0 !important;
-            }
+            #chat-window { width: 260px !important; right: 0 !important; bottom: 0 !important; }
         }
         #chat-button:hover { transform: scale(1.05); }
 
-        /* Kohdistetaan piilotus VAIN Jotform-agentin teknisiin osiin */
-        .jfAgent-greeting, 
-        .jfAgent-bubble, 
-        #jfAgent-welcome-message,
-        div[class^="jfAgent"] { 
+        /* VAIN JOTFORM AGENTTIIN KOHDISTUVA PIILOTUS */
+        .jfAgent-greeting, .jfAgent-bubble, #jfAgent-welcome-message { 
             display: none !important; 
             opacity: 0 !important; 
-            visibility: hidden !important;
+            visibility: hidden !important; 
         }
     `;
     document.head.appendChild(style);
