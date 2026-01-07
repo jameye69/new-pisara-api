@@ -5,22 +5,22 @@ const cors = require('cors');
 const app = express();
 app.use(cors());
 
-// Apufunktio luvun muuttamiseen (käsittelee pilkut ja pisteet)
+// Apufunktio luvun muuttamiseen (marraskuun versio)
 const parseArr = (arr) => Array.isArray(arr) ? arr.map(val => parseFloat(String(val).replace(',', '.')) || 0) : [];
 
-// --- 1. ETUSIVU: DATA & LASKURIT ---
+// --- 1. PÄÄDATA (Etusivun kaaviot ja laskurit) ---
 app.get('/api/data', async (req, res) => {
     try {
         const sheets = google.sheets({ version: 'v4', auth: process.env.GOOGLE_API_KEY });
         const responses = await sheets.spreadsheets.values.batchGet({
             spreadsheetId: process.env.SPREADSHEET_ID,
             ranges: [
-                'Yksityiset!M1:Q3', // Kaavion kuntakohtaiset luvut
-                'Yksityiset!R4',    // Yksityiset kpl
-                'Yksityiset!T2',    // Yksityiset euro
-                'Yrityksille!Z2',   // Yritykset kpl
-                'Yrityksille!Y2',   // Yritykset euro
-                'Yksityiset!Z2'     // Keräystavoite
+                'Yksityiset!M1:Q3', 
+                'Yksityiset!R4', 
+                'Yksityiset!T2', 
+                'Yrityksille!Z2', 
+                'Yrityksille!Y2', 
+                'Yksityiset!Z2'
             ]
         });
         const v = responses.data.valueRanges;
@@ -28,42 +28,34 @@ app.get('/api/data', async (req, res) => {
 
         res.json({
             lastUpdated: new Date(),
-            chart: { 
-                labels: v[0].values[0], 
-                dataset1: parseArr(v[0].values[1]), 
-                dataset2: parseArr(v[0].values[2]) 
-            },
-            counters: { 
-                yksityisetKpl: getVal(1), 
-                yksityisetEuro: getVal(2), 
-                yrityksetKpl: getVal(3), 
-                yrityksetEuro: getVal(4), 
-                keraysTavoite: getVal(5) 
-            }
+            chart: { labels: v[0].values[0], dataset1: parseArr(v[0].values[1]), dataset2: parseArr(v[0].values[2]) },
+            counters: { yksityisetKpl: getVal(1), yksityisetEuro: getVal(2), yrityksetKpl: getVal(3), yrityksetEuro: getVal(4), keraysTavoite: getVal(5) }
         });
-    } catch (e) { res.status(500).json({ error: "Virhe datan haussa" }); }
+    } catch (e) { 
+        res.status(500).json({ error: "Virhe datan haussa" }); 
+    }
 });
 
-// --- 2. YRITYSSIVU: YRITYSKAAVIO ---
+// --- 2. YRITYSKAAVIO (Yrityksille-sivun kuntakohtainen tilanne) ---
 app.get('/api/yrityskaavio', async (req, res) => {
     try {
         const sheets = google.sheets({ version: 'v4', auth: process.env.GOOGLE_API_KEY });
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: process.env.SPREADSHEET_ID,
-            range: 'Yrityksille!M1:Q3', // Yritysten kuntakohtaiset tiedot
+            range: 'Yrityksille!M1:Q3', 
         });
         const rows = response.data.values;
-        if (!rows) return res.status(404).json({ error: "Dataa ei löytynyt" });
-
         res.json({
             labels: rows[0],
             ostojenMaara: parseArr(rows[1]),
             suhdeluku: parseArr(rows[2])
         });
-    } catch (e) { res.status(500).json({ error: "Yrityskaavion virhe" }); }
+    } catch (e) { 
+        res.status(500).json({ error: "Yrityskaavion virhe" }); 
+    }
 });
 
-// --- 3. HAASTEET ---
+// --- 3. HAASTEET (Yritykseltä yritykselle) ---
 app.get('/api/haasteet', async (req, res) => {
     try {
         const sheets = google.sheets({ version: 'v4', auth: process.env.GOOGLE_API_KEY });
@@ -72,7 +64,7 @@ app.get('/api/haasteet', async (req, res) => {
             range: 'Yrityksille!A2:B50', 
         });
         const rows = response.data.values || [];
-        const haasteet = rows.map(r => ({ haastaja: r[0], haastettava: r[1] })).filter(h => h.haastaja && h.haastettava);
+        const haasteet = rows.map(r => ({ haastaja: r[0], haastettava: r[1] })).filter(h => h.haastaja);
         res.json(haasteet);
     } catch (e) { res.json([]); }
 });
