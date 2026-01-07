@@ -24,12 +24,13 @@ app.use(cors({
   }
 }));
 
-// Tarjoillaan chatbot-v3.js staattisena tiedostona juuresta
+// --- TARJOILLAAN CHATBOT-TIEDOSTO ---
+// Käytetään suoraa reittiä, jotta se ei sotke API-hakuja
 app.get('/chatbot-v3.js', (req, res) => {
     res.sendFile(path.join(__dirname, 'chatbot-v3.js'));
 });
 
-// --- UUSI: HAASTEIDEN HAKU (Pisara25 tarvitsee tämän) ---
+// --- API: YRITYSHAASTEET (Pisara25) ---
 app.get('/api/haasteet', async (req, res) => {
     try {
         const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -38,62 +39,25 @@ app.get('/api/haasteet', async (req, res) => {
 
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            range: 'Yrityksille!A2:B20', // Varmista että alue täsmää Sheetsiin
+            range: 'Yrityksille!A2:B50', 
         });
 
         const rows = response.data.values;
-        if (!rows || rows.length === 0) {
-            return res.json([]);
-        }
+        if (!rows || rows.length === 0) return res.json([]);
 
         const haasteet = rows.map(row => ({
-            nimi: row[0],
-            haaste: row[1]
-        })).filter(h => h.nimi && h.haaste);
+            nimi: row[0] || "",
+            haaste: row[1] || ""
+        })).filter(h => h.nimi !== "");
 
         res.json(haasteet);
     } catch (e) {
-        console.error("Haasteiden haku epäonnistui:", e.message);
-        res.status(500).json({ viesti: "Haasteita ei voitu ladata" });
+        console.error("Virhe haasteissa:", e.message);
+        res.status(500).json({ viesti: "Virhe" });
     }
 });
 
-// --- TILAUSHAKU (Neulon by Ajastamo) ---
-app.get('/api/chatbot/tilaus', async (req, res) => {
-    let { numero, email } = req.query;
-    const shop = process.env.SHOP_URL || "neulon-by-ajastamo.myshopify.com";
-    const token = process.env.SHOPIFY_API_SECRET; 
-
-    try {
-        const searchName = (numero || "").trim();
-        const customerEmail = (email || "").trim().toLowerCase();
-
-        const url = `https://${shop}/admin/api/2024-01/orders.json?name=${encodeURIComponent(searchName)}&status=any`;
-        const response = await axios.get(url, {
-            headers: { 'X-Shopify-Access-Token': token, 'Content-Type': 'application/json' }
-        });
-
-        const orders = response.data.orders || [];
-        if (orders.length > 0) {
-            const tilaus = orders[0];
-            const shopifyEmail = (tilaus.email || "").trim().toLowerCase();
-
-            if (shopifyEmail === "" || shopifyEmail === customerEmail) {
-                let tila = "Käsittelyssä";
-                if (tilaus.fulfillment_status === 'fulfilled') tila = "Lähetetty / Valmis";
-                if (tilaus.cancelled_at) tila = "Peruttu";
-                return res.json({ viesti: `Tilauksesi (${tilaus.name}) tila on: ${tila}.` });
-            } else {
-                return res.json({ viesti: "Tilaus löytyi, mutta sähköpostiosoite ei täsmää." });
-            }
-        }
-        res.json({ viesti: "Tilausta ei löytynyt." });
-    } catch (e) {
-        res.status(500).json({ viesti: "Yhteysvirhe Shopify-palveluun." });
-    }
-});
-
-// --- PÄÄDATA (Pisara25 Kaaviot ja Laskurit) ---
+// --- API: PÄÄDATA & KAAVIO (Pisara25) ---
 app.get('/api/data', async (req, res) => {
     try {
         const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -125,7 +89,41 @@ app.get('/api/data', async (req, res) => {
             }
         });
     } catch (e) {
-        res.status(500).json({ viesti: "Datan lataus epäonnistui" });
+        console.error("Virhe datassa:", e.message);
+        res.status(500).json({ viesti: "Virhe" });
+    }
+});
+
+// --- API: TILAUSHAKU (Neulon by Ajastamo) ---
+app.get('/api/chatbot/tilaus', async (req, res) => {
+    let { numero, email } = req.query;
+    const shop = process.env.SHOP_URL || "neulon-by-ajastamo.myshopify.com";
+    const token = process.env.SHOPIFY_API_SECRET; 
+
+    try {
+        const searchName = (numero || "").trim();
+        const customerEmail = (email || "").trim().toLowerCase();
+
+        const url = `https://${shop}/admin/api/2024-01/orders.json?name=${encodeURIComponent(searchName)}&status=any`;
+        const response = await axios.get(url, {
+            headers: { 'X-Shopify-Access-Token': token, 'Content-Type': 'application/json' }
+        });
+
+        const orders = response.data.orders || [];
+        if (orders.length > 0) {
+            const tilaus = orders[0];
+            const shopifyEmail = (tilaus.email || "").trim().toLowerCase();
+
+            if (shopifyEmail === "" || shopifyEmail === customerEmail) {
+                let tila = "Käsittelyssä";
+                if (tilaus.fulfillment_status === 'fulfilled') tila = "Lähetetty / Valmis";
+                if (tilaus.cancelled_at) tila = "Peruttu";
+                return res.json({ viesti: `Tilauksesi (${tilaus.name}) tila on: ${tila}.` });
+            }
+        }
+        res.json({ viesti: "Tilausta ei löytynyt." });
+    } catch (e) {
+        res.status(500).json({ viesti: "Yhteysvirhe." });
     }
 });
 
