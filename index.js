@@ -24,12 +24,41 @@ app.use(cors({
   }
 }));
 
-// Tarjoillaan chatbot-v3.js staattisena tiedostona
+// Tarjoillaan chatbot-v3.js staattisena tiedostona juuresta
 app.get('/chatbot-v3.js', (req, res) => {
     res.sendFile(path.join(__dirname, 'chatbot-v3.js'));
 });
 
-// --- TILAUSHAKU ---
+// --- UUSI: HAASTEIDEN HAKU (Pisara25 tarvitsee tämän) ---
+app.get('/api/haasteet', async (req, res) => {
+    try {
+        const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
+        const API_KEY = process.env.GOOGLE_API_KEY;
+        const sheets = google.sheets({ version: 'v4', auth: API_KEY });
+
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId: SPREADSHEET_ID,
+            range: 'Yrityksille!A2:B20', // Varmista että alue täsmää Sheetsiin
+        });
+
+        const rows = response.data.values;
+        if (!rows || rows.length === 0) {
+            return res.json([]);
+        }
+
+        const haasteet = rows.map(row => ({
+            nimi: row[0],
+            haaste: row[1]
+        })).filter(h => h.nimi && h.haaste);
+
+        res.json(haasteet);
+    } catch (e) {
+        console.error("Haasteiden haku epäonnistui:", e.message);
+        res.status(500).json({ viesti: "Haasteita ei voitu ladata" });
+    }
+});
+
+// --- TILAUSHAKU (Neulon by Ajastamo) ---
 app.get('/api/chatbot/tilaus', async (req, res) => {
     let { numero, email } = req.query;
     const shop = process.env.SHOP_URL || "neulon-by-ajastamo.myshopify.com";
@@ -64,7 +93,7 @@ app.get('/api/chatbot/tilaus', async (req, res) => {
     }
 });
 
-// --- GOOGLE SHEETS DATA (Pisara25 varten) ---
+// --- PÄÄDATA (Pisara25 Kaaviot ja Laskurit) ---
 app.get('/api/data', async (req, res) => {
     try {
         const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -77,8 +106,6 @@ app.get('/api/data', async (req, res) => {
         });
 
         const v = responses.data.valueRanges;
-        if (!v || v.length < 6) throw new Error("Data puuttuu");
-
         const parseArr = (arr) => Array.isArray(arr) ? arr.map(val => parseFloat(String(val).replace(',', '.')) || 0) : [];
         const getVal = (i) => parseFloat(String(v[i]?.values?.[0]?.[0] || '0').replace(',', '.')) || 0;
 
@@ -98,7 +125,6 @@ app.get('/api/data', async (req, res) => {
             }
         });
     } catch (e) {
-        console.error("Google Sheets virhe:", e.message);
         res.status(500).json({ viesti: "Datan lataus epäonnistui" });
     }
 });
