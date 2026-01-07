@@ -5,27 +5,9 @@ const axios = require('axios');
 const path = require('path');
 
 const app = express();
+app.use(cors());
 
-// --- CORS ASETUKSET ---
-// Sallitaan kaikki Pisara25 ja Neulon osoitteet
-const allowedOrigins = [
-  'https://pisara25.fi',
-  'https://www.pisara25.fi',
-  'https://neulonbyajastamo.fi',
-  'https://www.neulonbyajastamo.fi'
-];
-
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1 || origin.includes('localhost')) {
-      callback(null, true);
-    } else {
-      callback(new Error('CORS ei sallittu'));
-    }
-  }
-}));
-
-// --- 1. CHATBOT-TIEDOSTON TARJOILU ---
+// --- 1. CHATBOT-TIEDOSTON TARJOILU (Uusi lisäys, joka ei riko muuta) ---
 app.get('/chatbot-v3.js', (req, res) => {
     res.sendFile(path.resolve(__dirname, 'chatbot-v3.js'));
 });
@@ -48,12 +30,12 @@ app.get('/api/data', async (req, res) => {
             counters: { yksityisetKpl: getVal(1), yksityisetEuro: getVal(2), yrityksetKpl: getVal(3), yrityksetEuro: getVal(4), keraysTavoite: getVal(5) }
         });
     } catch (e) {
-        res.status(500).json({ error: "Datan haku epäonnistui" });
+        console.error("Data-virhe:", e.message);
+        res.status(500).json({ error: "Virhe" });
     }
 });
 
-// --- 3. PISARA25: HAASTEET JA TERVEHDYKSET ---
-// Jos iframe-upotus hakee tekstejä, se käyttää todennäköisesti tätä reittiä
+// --- 3. PISARA25: YRITYSHAASTEET ---
 app.get('/api/haasteet', async (req, res) => {
     try {
         const sheets = google.sheets({ version: 'v4', auth: process.env.GOOGLE_API_KEY });
@@ -65,7 +47,7 @@ app.get('/api/haasteet', async (req, res) => {
         const haasteet = rows.map(r => ({ nimi: r[0], haaste: r[1] })).filter(h => h.nimi);
         res.json(haasteet);
     } catch (e) {
-        res.status(500).json({ error: "Haasteiden haku epäonnistui" });
+        res.status(500).json({ error: "Virhe" });
     }
 });
 
@@ -92,4 +74,5 @@ app.get('/api/chatbot/tilaus', async (req, res) => {
     }
 });
 
-app.listen(process.env.PORT || 3001);
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => console.log(`Portti ${PORT}`));
