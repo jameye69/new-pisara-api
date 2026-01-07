@@ -5,16 +5,23 @@ const cors = require('cors');
 const app = express();
 app.use(cors());
 
-// Apufunktio datan muotoiluun
+// Apufunktio lukuun muuttamiseen
 const parseArr = (arr) => Array.isArray(arr) ? arr.map(val => parseFloat(String(val).replace(',', '.')) || 0) : [];
 
-// --- 1. ETUSIVU: KAAVIO JA LASKURIT ---
+// --- 1. ETUSIVU: KUNTAKOHTAINEN KAAVIO & LASKURIT ---
 app.get('/api/data', async (req, res) => {
     try {
         const sheets = google.sheets({ version: 'v4', auth: process.env.GOOGLE_API_KEY });
         const responses = await sheets.spreadsheets.values.batchGet({
             spreadsheetId: process.env.SPREADSHEET_ID,
-            ranges: ['Yksityiset!M1:Q3', 'Yksityiset!R4', 'Yksityiset!T2', 'Yrityksille!Z2', 'Yrityksille!Y2', 'Yksityiset!Z2']
+            ranges: [
+                'Yksityiset!M1:Q3', // Kaavion luvut (Inkoo, Kirkkonummi jne.)
+                'Yksityiset!R4',    // Yksityiset kpl
+                'Yksityiset!T2',    // Yksityiset euro
+                'Yrityksille!Z2',   // Yritykset kpl
+                'Yrityksille!Y2',   // Yritykset euro
+                'Yksityiset!Z2'     // Keräystavoite
+            ]
         });
         const v = responses.data.valueRanges;
         const getVal = (i) => parseFloat(String(v[i]?.values?.[0]?.[0] || '0').replace(',', '.')) || 0;
@@ -27,30 +34,30 @@ app.get('/api/data', async (req, res) => {
     } catch (e) { res.status(500).json({ error: "Virhe" }); }
 });
 
-// --- 2. YRITYSSIVU: KAAVIO ---
+// --- 2. YRITYSSIVU: YRITYSKAAVIO (Inkoo, Lohja jne.) ---
 app.get('/api/yrityskaavio', async (req, res) => {
     try {
         const sheets = google.sheets({ version: 'v4', auth: process.env.GOOGLE_API_KEY });
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: process.env.SPREADSHEET_ID,
-            range: 'Yrityksille!M1:Q3', 
+            range: 'Yrityksille!M1:Q3', // Korjattu alue yritysten kuntakaaviolle
         });
         const rows = response.data.values;
         res.json({
-            labels: rows[0],
+            labels: rows[0], // Inkoo, Kirkkonummi...
             ostojenMaara: parseArr(rows[1]),
             suhdeluku: parseArr(rows[2])
         });
     } catch (e) { res.status(500).json({ error: "Virhe" }); }
 });
 
-// --- 3. HAASTAMINEN.HTML: HAASTELISTA (NUOLI-IKONI) ---
+// --- 3. HAASTEET (Haastaja -> Haastettava) ---
 app.get('/api/haasteet', async (req, res) => {
     try {
         const sheets = google.sheets({ version: 'v4', auth: process.env.GOOGLE_API_KEY });
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: process.env.SPREADSHEET_ID,
-            range: 'Yrityksille!A2:B50', 
+            range: 'Yrityksille!A2:B50', // A=Haastaja, B=Haastettava
         });
         const rows = response.data.values || [];
         const haasteet = rows.map(r => ({ haastaja: r[0], haastettava: r[1] })).filter(h => h.haastaja && h.haastettava);
@@ -58,35 +65,33 @@ app.get('/api/haasteet', async (req, res) => {
     } catch (e) { res.status(500).json({ error: "Virhe" }); }
 });
 
-// --- 4. YRITYSLISTA_UPOTUS.HTML: OSALLISTUJALISTA (MUSTA KORTTI) ---
+// --- 4. YRITYSLISTA (Nimi ja Tervehdys) ---
 app.get('/api/yrityslista', async (req, res) => {
     try {
         const sheets = google.sheets({ version: 'v4', auth: process.env.GOOGLE_API_KEY });
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: process.env.SPREADSHEET_ID,
-            range: 'Yrityksille!A2:C100', 
+            range: 'Yrityksille!A2:C100', // A=Nimi, C=Tervehdys
         });
         const rows = response.data.values || [];
-        // Sarake A: nimi, Sarake C: tervehdys
         const lista = rows.map(r => ({ nimi: r[0], tervehdys: r[2] })).filter(yr => yr.nimi);
         res.json(lista);
     } catch (e) { res.status(500).json({ error: "Virhe" }); }
 });
 
-// --- 5. TERVEHDYS_UPOTUS.HTML: YKSITYISTEN TERVEISET (HARMAA KORTTI) ---
+// --- 5. YKSITYISTEN TERVEISET ---
 app.get('/api/terveiset', async (req, res) => {
     try {
         const sheets = google.sheets({ version: 'v4', auth: process.env.GOOGLE_API_KEY });
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: process.env.SPREADSHEET_ID,
-            range: 'Yksityiset!A2:D100', 
+            range: 'Yksityiset!A2:D100', // A=Aikaleima, B=Kunta, D=Tervehdys
         });
         const rows = response.data.values || [];
-        // Sarake A: aikaleima, B: kunta, D: tervehdys
         const lista = rows.map(r => ({ aikaleima: r[0], kunta: r[1], tervehdys: r[3] })).filter(t => t.tervehdys);
         res.json(lista);
     } catch (e) { res.status(500).json({ error: "Virhe" }); }
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`Kaikki Pisara25 reitit aktivoitu portissa ${PORT}`));
+app.listen(PORT, () => console.log(`Palvelin käynnissä`));
