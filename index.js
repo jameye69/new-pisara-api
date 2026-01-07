@@ -7,7 +7,7 @@ const path = require('path');
 const app = express();
 
 // --- CORS ASETUKSET ---
-// Sallitaan molemmat sivustosi ja localhost testaukseen
+// Sallitaan kaikki Pisara25 ja Neulon osoitteet
 const allowedOrigins = [
   'https://pisara25.fi',
   'https://www.pisara25.fi',
@@ -33,112 +33,63 @@ app.get('/chatbot-v3.js', (req, res) => {
 // --- 2. PISARA25: PÄÄDATA (Kaaviot ja Laskurit) ---
 app.get('/api/data', async (req, res) => {
     try {
-        const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
-        const API_KEY = process.env.GOOGLE_API_KEY;
-        const sheets = google.sheets({ version: 'v4', auth: API_KEY });
-
+        const sheets = google.sheets({ version: 'v4', auth: process.env.GOOGLE_API_KEY });
         const responses = await sheets.spreadsheets.values.batchGet({
-            spreadsheetId: SPREADSHEET_ID,
-            ranges: [
-                'Yksityiset!M1:Q3', // Kaavion tiedot
-                'Yksityiset!R4',    // Yksityiset kpl
-                'Yksityiset!T2',    // Yksityiset euro
-                'Yrityksille!Z2',   // Yritykset kpl
-                'Yrityksille!Y2',   // Yritykset euro
-                'Yksityiset!Z2'     // Keräystavoite
-            ]
+            spreadsheetId: process.env.SPREADSHEET_ID,
+            ranges: ['Yksityiset!M1:Q3', 'Yksityiset!R4', 'Yksityiset!T2', 'Yrityksille!Z2', 'Yrityksille!Y2', 'Yksityiset!Z2']
         });
-
         const v = responses.data.valueRanges;
-        
-        // Apufunktiot datan muotoiluun
         const parseArr = (arr) => Array.isArray(arr) ? arr.map(val => parseFloat(String(val).replace(',', '.')) || 0) : [];
         const getVal = (i) => parseFloat(String(v[i]?.values?.[0]?.[0] || '0').replace(',', '.')) || 0;
 
         res.json({
             lastUpdated: new Date(),
-            chart: { 
-                labels: v[0].values[0], 
-                dataset1: parseArr(v[0].values[1]), 
-                dataset2: parseArr(v[0].values[2]) 
-            },
-            counters: { 
-                yksityisetKpl: getVal(1), 
-                yksityisetEuro: getVal(2), 
-                yrityksetKpl: getVal(3), 
-                yrityksetEuro: getVal(4), 
-                keraysTavoite: getVal(5) 
-            }
+            chart: { labels: v[0].values[0], dataset1: parseArr(v[0].values[1]), dataset2: parseArr(v[0].values[2]) },
+            counters: { yksityisetKpl: getVal(1), yksityisetEuro: getVal(2), yrityksetKpl: getVal(3), yrityksetEuro: getVal(4), keraysTavoite: getVal(5) }
         });
     } catch (e) {
-        console.error("Pisara25 Data Virhe:", e.message);
-        res.status(500).json({ error: "Datan lataus epäonnistui" });
+        res.status(500).json({ error: "Datan haku epäonnistui" });
     }
 });
 
-// --- 3. PISARA25: YRITYSHAASTEET ---
+// --- 3. PISARA25: HAASTEET JA TERVEHDYKSET ---
+// Jos iframe-upotus hakee tekstejä, se käyttää todennäköisesti tätä reittiä
 app.get('/api/haasteet', async (req, res) => {
     try {
-        const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
-        const API_KEY = process.env.GOOGLE_API_KEY;
-        const sheets = google.sheets({ version: 'v4', auth: API_KEY });
-
+        const sheets = google.sheets({ version: 'v4', auth: process.env.GOOGLE_API_KEY });
         const response = await sheets.spreadsheets.values.get({
-            spreadsheetId: SPREADSHEET_ID,
-            range: 'Yrityksille!A2:B50', // Haetaan yrityksen nimi ja haasteen kuvaus
+            spreadsheetId: process.env.SPREADSHEET_ID,
+            range: 'Yrityksille!A2:B50', 
         });
-
         const rows = response.data.values || [];
-        const haasteet = rows
-            .map(row => ({ nimi: row[0], haaste: row[1] }))
-            .filter(h => h.nimi && h.haaste); // Poistetaan tyhjät rivit
-
+        const haasteet = rows.map(r => ({ nimi: r[0], haaste: r[1] })).filter(h => h.nimi);
         res.json(haasteet);
     } catch (e) {
-        console.error("Pisara25 Haasteet Virhe:", e.message);
-        res.status(500).json({ error: "Haasteiden lataus epäonnistui" });
+        res.status(500).json({ error: "Haasteiden haku epäonnistui" });
     }
 });
 
-// --- 4. NEULON: TILAUSHAKU (Shopify) ---
+// --- 4. NEULON: TILAUSHAKU ---
 app.get('/api/chatbot/tilaus', async (req, res) => {
     const { numero, email } = req.query;
-    const shop = process.env.SHOP_URL || "neulon-by-ajastamo.myshopify.com";
-    const token = process.env.SHOPIFY_API_SECRET; 
-
     try {
-        const searchName = (numero || "").trim();
-        const customerEmail = (email || "").trim().toLowerCase();
-
-        const url = `https://${shop}/admin/api/2024-01/orders.json?name=${encodeURIComponent(searchName)}&status=any`;
+        const url = `https://${process.env.SHOP_URL}/admin/api/2024-01/orders.json?name=${encodeURIComponent(numero)}&status=any`;
         const response = await axios.get(url, {
-            headers: { 'X-Shopify-Access-Token': token, 'Content-Type': 'application/json' }
+            headers: { 'X-Shopify-Access-Token': process.env.SHOPIFY_API_SECRET }
         });
-
         const orders = response.data.orders || [];
         if (orders.length > 0) {
-            const tilaus = orders[0];
-            const shopifyEmail = (tilaus.email || "").trim().toLowerCase();
-
-            // Sallitaan haku jos sähköposti täsmää tai jos tilauksella ei ole sähköpostia (POS)
-            if (shopifyEmail === "" || shopifyEmail === customerEmail) {
-                let tila = "Käsittelyssä";
-                if (tilaus.fulfillment_status === 'fulfilled') tila = "Lähetetty / Valmis";
-                if (tilaus.cancelled_at) tila = "Peruttu";
-                return res.json({ viesti: `Tilauksesi (${tilaus.name}) tila on: ${tila}.` });
-            } else {
-                return res.json({ viesti: "Tilaus löytyi, mutta sähköpostiosoite ei täsmää." });
+            const t = orders[0];
+            const sEmail = (t.email || "").toLowerCase();
+            if (sEmail === "" || sEmail === (email || "").toLowerCase()) {
+                let tila = t.fulfillment_status === 'fulfilled' ? "Lähetetty" : "Käsittelyssä";
+                return res.json({ viesti: `Tilauksesi tila: ${tila}.` });
             }
         }
         res.json({ viesti: "Tilausta ei löytynyt." });
     } catch (e) {
-        console.error("Shopify Virhe:", e.message);
-        res.status(500).json({ viesti: "Yhteysvirhe tilauspalveluun." });
+        res.status(500).json({ viesti: "Yhteysvirhe." });
     }
 });
 
-// --- PALVELIMEN KÄYNNISTYS ---
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-    console.log(`Palvelin käynnissä portissa ${PORT}`);
-});
+app.listen(process.env.PORT || 3001);
